@@ -1,7 +1,7 @@
-# -----------------------------
-# Stage 1 - Composer
-# -----------------------------
-FROM composer:2 AS composer
+# ==========================================
+# Stage 1 - Composer Dependencies
+# ==========================================
+FROM composer:2 AS vendor
 
 WORKDIR /app
 
@@ -12,36 +12,35 @@ RUN composer install \
     --prefer-dist \
     --no-interaction \
     --optimize-autoloader \
-    --ignore-platform-reqs
+    --ignore-platform-reqs \
+    --no-scripts
 
 COPY . .
 
 RUN composer dump-autoload --optimize
 
 
-# -----------------------------
-# Stage 2 - PHP
-# -----------------------------
-FROM php:8.5-fpm
+# ==========================================
+# Stage 2 - Runtime
+# ==========================================
+FROM php:8.5-cli
 
 WORKDIR /var/www/html
 
-# Install Linux packages
+# Install system packages
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
-    curl \
     zip \
+    curl \
     libzip-dev \
+    libpq-dev \
+    libicu-dev \
     libpng-dev \
     libjpeg62-turbo-dev \
     libfreetype6-dev \
-    libpq-dev \
-    libicu-dev \
-    libonig-dev \
     libxml2-dev \
-    supervisor \
-    cron \
+    libonig-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
         pdo \
@@ -54,19 +53,39 @@ RUN apt-get update && apt-get install -y \
         zip \
         opcache
 
-# Redis extension
-RUN pecl install redis && docker-php-ext-enable redis
+# Install Redis extension
+RUN pecl install redis \
+    && docker-php-ext-enable redis
+
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # Copy application
-COPY --from=composer /app /var/www/html
+COPY --from=vendor /app /var/www/html
 
-# Permissions
+# Create storage folders
+RUN mkdir -p \
+    storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/logs \
+    bootstrap/cache
+
+# Set permissions
 RUN chown -R www-data:www-data storage bootstrap/cache
 
 RUN chmod -R 775 storage bootstrap/cache
 
+# Optimize Laravel
+RUN composer dump-autoload --optimize
+
 EXPOSE 8000
 
-CMD php artisan migrate --force && \
+CMD php artisan config:clear && \
+    php artisan cache:clear && \
+    php artisan route:clear && \
+    php artisan view:clear && \
+    php artisan package:discover --ansi && \
+    php artisan migrate --force && \
     php artisan storage:link || true && \
-    php artisan serve --host=0.0.0.0 --port=8000
+    php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
