@@ -1,0 +1,5 @@
+[phases.setup]
+nixPkgs = ["php85", "php85Extensions.redis", "php85Extensions.pdo_pgsql"]
+
+[variables]
+NIXPACKS_PHP_VERSION = "8.5"
