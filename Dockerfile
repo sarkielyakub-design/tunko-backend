@@ -1,6 +1,4 @@
-# ===========================
-# Stage 1 - Composer
-# ===========================
+
 FROM composer:2 AS composer
 
 WORKDIR /app
