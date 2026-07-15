@@ -8,7 +8,7 @@ class DataPurchaseRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->check();
+        return true;
     }
 
     public function rules(): array
@@ -22,17 +22,18 @@ class DataPurchaseRequest extends FormRequest
 
             'network_id' => [
                 'required',
-                'numeric',
+                'integer',
             ],
 
             'bundle_id' => [
                 'required',
-                'numeric',
+                'integer',
             ],
 
             'phone' => [
                 'required',
                 'string',
+                'min:8',
                 'max:20',
             ],
 
@@ -48,17 +49,26 @@ class DataPurchaseRequest extends FormRequest
     {
         return [
 
-            'country_id.required' => 'Country is required.',
-            'country_id.exists' => 'Invalid country selected.',
+            'country_id.required' =>
+                'Country is required.',
 
-            'network_id.required' => 'Network is required.',
+            'country_id.exists' =>
+                'Invalid country selected.',
 
-            'bundle_id.required' => 'Bundle is required.',
+            'network_id.required' =>
+                'Network is required.',
 
-            'phone.required' => 'Phone number is required.',
+            'bundle_id.required' =>
+                'Bundle is required.',
 
-            'pin.required' => 'Transaction PIN is required.',
-            'pin.digits' => 'PIN must be 4 digits.',
+            'phone.required' =>
+                'Phone number is required.',
+
+            'pin.required' =>
+                'Transaction PIN is required.',
+
+            'pin.digits' =>
+                'PIN must be exactly 4 digits.',
 
         ];
     }
