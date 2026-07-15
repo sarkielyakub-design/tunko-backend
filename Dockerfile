@@ -5,26 +5,19 @@ FROM composer:2 AS composer
 
 WORKDIR /app
 
-COPY composer.json composer.lock ./
+COPY . .
 
 RUN composer install \
     --no-dev \
     --prefer-dist \
     --no-interaction \
     --ignore-platform-reqs \
-    --optimize-autoloader \
-    --no-scripts
-
-COPY . .
-
-RUN composer dump-autoload --optimize
-
-RUN php artisan package:discover
+    --optimize-autoloader
 
 # ===========================
-# Stage 2 - PHP Runtime
+# Stage 2 - Runtime
 # ===========================
-FROM php:8.5-cli
+FROM php:8.4-cli
 
 WORKDIR /var/www/html
 
@@ -53,8 +46,8 @@ RUN apt-get update && apt-get install -y \
         zip \
         opcache
 
-RUN pecl install redis \
-    && docker-php-ext-enable redis
+# Remove Redis temporarily if it keeps failing
+# RUN pecl install redis && docker-php-ext-enable redis
 
 COPY --from=composer /app /var/www/html
 
@@ -63,16 +56,13 @@ RUN mkdir -p storage/framework/cache \
     storage/framework/views \
     bootstrap/cache
 
-RUN chown -R www-data:www-data storage bootstrap/cache
-
-RUN chmod -R 775 storage bootstrap/cache
+RUN chmod -R 777 storage bootstrap/cache
 
 EXPOSE 8080
 
 CMD php artisan migrate --force && \
     php artisan storage:link || true && \
-    php artisan config:clear && \
-    php artisan cache:clear && \
     php artisan config:cache && \
     php artisan route:cache && \
     php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
+Give me full
