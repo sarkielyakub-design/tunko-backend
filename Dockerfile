@@ -5,22 +5,32 @@ FROM composer:2 AS composer
 
 WORKDIR /app
 
+# Copy the entire project
 COPY . .
 
+# Install dependencies
 RUN composer install \
     --no-dev \
     --prefer-dist \
     --no-interaction \
     --ignore-platform-reqs \
-    --optimize-autoloader
+    --optimize-autoloader \
+    --no-scripts
+
+# Generate optimized autoload
+RUN composer dump-autoload --optimize
+
+# Discover Laravel packages
+RUN php artisan package:discover
 
 # ===========================
-# Stage 2 - Runtime
+# Stage 2 - PHP Runtime
 # ===========================
 FROM php:8.4-cli
 
 WORKDIR /var/www/html
 
+# Install system packages
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -44,25 +54,37 @@ RUN apt-get update && apt-get install -y \
         exif \
         gd \
         zip \
-        opcache
+        opcache \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Remove Redis temporarily if it keeps failing
+# Redis (optional)
 # RUN pecl install redis && docker-php-ext-enable redis
 
+# Copy project from Composer stage
 COPY --from=composer /app /var/www/html
 
-RUN mkdir -p storage/framework/cache \
+# Create Laravel directories
+RUN mkdir -p \
+    storage/framework/cache \
     storage/framework/sessions \
     storage/framework/views \
+    storage/logs \
     bootstrap/cache
 
-RUN chmod -R 777 storage bootstrap/cache
+# Permissions
+RUN chmod -R 775 storage bootstrap/cache
+
+# Laravel environment
+ENV APP_ENV=production
+ENV APP_DEBUG=false
 
 EXPOSE 8080
 
 CMD php artisan migrate --force && \
     php artisan storage:link || true && \
+    php artisan config:clear && \
+    php artisan cache:clear && \
     php artisan config:cache && \
     php artisan route:cache && \
     php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
-Give me full
