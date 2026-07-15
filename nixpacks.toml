@@ -1,5 +1,10 @@
 [phases.setup]
-nixPkgs = ["php85", "php85Extensions.redis", "php85Extensions.pdo_pgsql"]
+nixPkgs = ["php"]
 
-[variables]
-NIXPACKS_PHP_VERSION = "8.5"
+[phases.install]
+cmds = [
+  "composer install --no-dev --optimize-autoloader --no-interaction"
+]
+
+[start]
+cmd = "php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT"
