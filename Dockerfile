@@ -12,12 +12,14 @@ RUN composer install \
     --prefer-dist \
     --no-interaction \
     --ignore-platform-reqs \
-    --optimize-autoloader
+    --optimize-autoloader \
+    --no-scripts
 
 COPY . .
 
 RUN composer dump-autoload --optimize
 
+RUN php artisan package:discover
 
 # ===========================
 # Stage 2 - PHP Runtime
