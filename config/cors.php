@@ -10,13 +10,29 @@ return [
     'allowed_methods' => ['*'],
 
     'allowed_origins' => [
+
+        // Local Development
         'http://localhost:3000',
-        'http://tunkomoney.com',
-        'http://www.tunkomoney.com',
-        'http://admin.tunkomoney.com'
+        'http://127.0.0.1:3000',
+
+        // Production Website
+        'https://tunkomoney.com',
+        'https://www.tunkomoney.com',
+
+        // Admin
+        'https://admin.tunkomoney.com',
+
+        // API
+        'https://api.tunkomoney.com',
+
+        // Optional Vercel Preview
+        'https://tunkowebsite-pr2h-git-main-sarkielyakub-designs-projects.vercel.app',
+
     ],
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        'https://*.vercel.app',
+    ],
 
     'allowed_headers' => ['*'],
 
