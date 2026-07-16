@@ -11,6 +11,9 @@ return [
 
     'allowed_origins' => [
         'http://localhost:3000',
+        'http://tunkomoney.com',
+        'http://www.tunkomoney.com',
+        'http://admin.tunkomoney.com'
     ],
 
     'allowed_origins_patterns' => [],
