@@ -10,24 +10,16 @@ class Country extends Model
     use HasFactory;
 
     protected $fillable = [
-
-        'name',
-
-        'iso2',
-
-        'iso3',
-
-        'currency',
-
-        'currency_name',
-
-        'flag',
-
-        'exchange_rate',
-
-        'is_active',
-
-    ];
+    'name',
+    'iso2',
+    'iso3',
+    'phone_code',
+    'currency',
+    'currency_name',
+    'flag',
+    'exchange_rate',
+    'is_active',
+];
 
     protected $casts = [
 
