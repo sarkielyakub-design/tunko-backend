@@ -2,12 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\Otp;
 use App\Models\User;
 use App\Models\Wallet;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 
 class AuthService
 {
@@ -19,119 +17,86 @@ class AuthService
         return DB::transaction(function () use ($data) {
 
             $user = User::create([
-                'first_name' => $data['first_name'],
-                'last_name' => $data['last_name'],
-                'username' => $data['username'],
-                'email' => $data['email'],
-                'phone' => $data['phone'],
-                'country' => $data['country'],
-                'password' => Hash::make($data['password']),
-                'referral_code' => $this->generateReferralCode(),
-                'is_verified' => false,
-                'is_active' => true,
+                'first_name'     => $data['first_name'],
+                'last_name'      => $data['last_name'],
+                'username'       => $data['username'],
+                'email'          => $data['email'],
+                'phone'          => $data['phone'],
+                'country'        => $data['country'],
+                'password'       => Hash::make($data['password']),
+                'referral_code'  => $this->generateReferralCode(),
+                'is_verified'    => true, // Temporary (OTP disabled)
+                'is_active'      => true,
             ]);
 
             Wallet::create([
-                'user_id' => $user->id,
-                'wallet_number' => $this->generateWalletNumber(),
-                'balance' => 0.00,
-                'currency' => $this->defaultCurrency($user->country),
-                'is_active' => true,
+                'user_id'        => $user->id,
+                'wallet_number'  => $this->generateWalletNumber(),
+                'balance'        => 0.00,
+                'currency'       => $this->defaultCurrency($user->country),
+                'is_active'      => true,
             ]);
 
-            $otp = random_int(100000, 999999);
-
-            Otp::where('email', $user->email)
-                ->where('type', 'verification')
-                ->delete();
-
-            Otp::create([
-                'user_id' => $user->id,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'code' => (string) $otp,
-                'type' => 'verification',
-                'expires_at' => now()->addMinutes(10),
-            ]);
-
-            Log::info("========== OTP ==========");
-            Log::info("Email: {$user->email}");
-            Log::info("OTP: {$otp}");
-            Log::info("=========================");
+            $device = $data['device_name'] ?? 'Tunko Web';
 
             $token = $user
-                ->createToken(
-                    $data['device_name'] ?? 'Tunko Mobile'
-                )
+                ->createToken($device)
                 ->plainTextToken;
 
             return [
-                'user' => $user->fresh('wallet'),
+                'user'  => $user->fresh('wallet'),
                 'token' => $token,
             ];
         });
     }
-/**
- * Login User
- */
-public function login(array $data): ?array
-{
-    $login = trim($data['login']);
-
-    $user = User::where('email', $login)
-        ->orWhere('phone', $login)
-        ->orWhere('username', $login)
-        ->first();
-
-    if (!$user) {
-        return null;
-    }
-
-    if (!Hash::check($data['password'], $user->password)) {
-        return null;
-    }
-
-    if (!$user->is_active) {
-        return null;
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Optional
-    |--------------------------------------------------------------------------
-    | Uncomment this later if you want users to verify their
-    | email/phone before logging in.
-    */
-    /*
-    if (!$user->is_verified) {
-        return null;
-    }
-    */
-
-    // Remove previous token for this device
-    $device = $data['device_name'] ?? 'Tunko Web';
-
-    $user->tokens()
-        ->where('name', $device)
-        ->delete();
-
-    $token = $user
-        ->createToken($device)
-        ->plainTextToken;
-
-    return [
-        'user'  => $user->load('wallet'),
-        'token' => $token,
-    ];
-}
 
     /**
- * Logout User
- */
-public function logout(User $user): void
-{
-    $user->currentAccessToken()?->delete();
-}
+     * Login User
+     */
+    public function login(array $data): ?array
+    {
+        $login = trim($data['login']);
+
+        $user = User::where('email', $login)
+            ->orWhere('phone', $login)
+            ->orWhere('username', $login)
+            ->first();
+
+        if (! $user) {
+            return null;
+        }
+
+        if (! Hash::check($data['password'], $user->password)) {
+            return null;
+        }
+
+        if (! $user->is_active) {
+            return null;
+        }
+
+        $device = $data['device_name'] ?? 'Tunko Web';
+
+        $user->tokens()
+            ->where('name', $device)
+            ->delete();
+
+        $token = $user
+            ->createToken($device)
+            ->plainTextToken;
+
+        return [
+            'user'  => $user->load('wallet'),
+            'token' => $token,
+        ];
+    }
+
+    /**
+     * Logout User
+     */
+    public function logout(User $user): void
+    {
+        $user->currentAccessToken()?->delete();
+    }
 
     /**
      * Generate Wallet Number
