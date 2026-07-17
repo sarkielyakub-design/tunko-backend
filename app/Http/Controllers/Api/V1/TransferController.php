@@ -881,4 +881,19 @@ public function history(Request $request)
 
     ]);
 }
+public function recipients(Request $request)
+{
+    $recipients = Recipient::where(
+        'user_id',
+        $request->user()->id
+    )
+    ->latest()
+    ->get();
+
+    return response()->json([
+        "success" => true,
+        "message" => "Recipients retrieved successfully.",
+        "data" => $recipients,
+    ]);
+}
 }

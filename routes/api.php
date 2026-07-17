@@ -178,50 +178,62 @@ Route::prefix('data')
     Route::get('/receipt/{reference}', [DataController::class, 'receipt']);
 
 });
-        /*
-        |--------------------------------------------------------------------------
-        | Transfers
-        |--------------------------------------------------------------------------
-        */
-        Route::get('/transfer/countries', [
-            TransferController::class,
-            'countries'
-        ]);
-        Route::get('/transfer/recipients', [
-            TransferController::class,
-            'recipients'
-        ]);
-        Route::post('/transfer/verify', [
-            TransferController::class,
-            'verify'
-        ]);
-        Route::post('/transfer/quote', [
-            TransferController::class,
-            'quote'
-        ]);
-        Route::post('/transfer/send', [
-            TransferController::class,
-            'transfer'
-        ]);
-        Route::get('/transfer/history', [
-            TransferController::class,
-            'history'
-        ]);
-        Route::get('/transfer/{reference}', [
-            TransferController::class,
-            'receipt'
-        ]);
-        Route::middleware("auth:sanctum")->group(function () {
+/*
+|--------------------------------------------------------------------------
+| Transfers
+|--------------------------------------------------------------------------
+*/
 
-    Route::post("/transfer/search", [TransferController::class, "searchRecipient"]);
+Route::prefix('transfer')->group(function () {
 
-    Route::post("/transfer/calculate-fee", [TransferController::class, "calculateFee"]);
+    // Countries
+    Route::get('/countries', [
+        TransferController::class,
+        'countries'
+    ]);
 
-    Route::post("/transfer/preview", [TransferController::class, "preview"]);
+    // Saved Recipients
+    Route::get('/recipients', [
+        TransferController::class,
+        'recipients'
+    ]);
 
-    Route::post("/transfer", [TransferController::class, "transfer"]);
+    // Search Recipient
+    Route::post('/search', [
+        TransferController::class,
+        'searchRecipient'
+    ]);
 
-    Route::get("/transfer/receipt/{reference}", [TransferController::class, "receipt"]);
+    // Verify Recipient
+    Route::post('/verify', [
+        TransferController::class,
+        'verify'
+    ]);
+
+    // Transfer Quote
+    Route::post('/quote', [
+        TransferController::class,
+        'quote'
+    ]);
+
+    // Send Money
+    Route::post('/send', [
+        TransferController::class,
+        'transfer'
+    ]);
+
+    // Transfer History
+    Route::get('/history', [
+        TransferController::class,
+        'history'
+    ]);
+
+    // Receipt
+    Route::get('/receipt/{reference}', [
+        TransferController::class,
+        'receipt'
+    ]);
+
 
     Route::get("/beneficiaries", [BeneficiaryController::class, "index"]);
 
