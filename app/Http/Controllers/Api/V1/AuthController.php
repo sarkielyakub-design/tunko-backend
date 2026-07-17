@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
-use App\Http\Resources\UserResource;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,7 +28,7 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'Registration successful.',
             'token'   => $result['token'],
-            'user'    => new UserResource($result['user']),
+            'user'    => $result['user']->load('wallet'),
         ], 201);
     }
 
@@ -53,7 +52,7 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'Login successful.',
             'token'   => $result['token'],
-            'user'    => new UserResource($result['user']),
+            'user'    => $result['user']->load('wallet'),
         ]);
     }
 
@@ -64,9 +63,7 @@ class AuthController extends Controller
     {
         return response()->json([
             'success' => true,
-            'user'    => new UserResource(
-                $request->user()->load('wallet')
-            ),
+            'user' => $request->user()->load('wallet'),
         ]);
     }
 
