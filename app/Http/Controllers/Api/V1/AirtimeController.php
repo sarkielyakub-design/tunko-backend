@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Api\V1;
-
+use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Airtime;
@@ -14,7 +14,7 @@ use App\Models\Country;
 use App\Models\Network;
 use App\Http\Requests\Airtime\PurchaseRequest;
 
-\Log::info($response);
+
 class AirtimeController extends Controller
 {
     //
@@ -242,16 +242,36 @@ public function receipt($reference)
 /**
 
 */
+
+
 public function countries()
 {
-    return response()->json([
-        "success" => true,
-        "data" => Country::where('is_active', true)
-            ->orderBy('name')
-            ->get(),
-    ]);
-}
+    try {
 
+        $countries = Country::where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            "success" => true,
+            "data" => $countries,
+        ]);
+
+    } catch (\Throwable $e) {
+
+        Log::error('Countries API Error', [
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString(),
+        ]);
+
+        return response()->json([
+            "success" => false,
+            "message" => $e->getMessage(),
+        ], 500);
+    }
+}
 /**
 
 */
