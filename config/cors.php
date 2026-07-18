@@ -31,7 +31,7 @@ return [
     ],
 
     'allowed_origins_patterns' => [
-        'https://*.vercel.app',
+        'https://tunkomoney.com',
     ],
 
     'allowed_headers' => ['*'],

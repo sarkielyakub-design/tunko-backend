@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\DataController;
 use App\Http\Controllers\Api\V1\AirtimeController;
 use App\Http\Controllers\Api\V1\WalletDepositController;
 use App\Http\Controllers\Api\V1\WalletTransferController;
+use App\Http\Controllers\Api\V1\CinetPayController;
 require __DIR__.'/api/admin.php';
 /*
 |--------------------------------------------------------------------------
@@ -72,6 +73,26 @@ Route::prefix('v1')->group(function () {
         [WalletDepositController::class, 'verify']
     );
 
+    Route::middleware('auth:sanctum')
+    ->prefix('wallet/deposit')
+    ->group(function () {
+
+        Route::post(
+            '/initialize',
+            [CinetPayController::class, 'initialize']
+        );
+
+        Route::post(
+            '/verify',
+            [CinetPayController::class, 'verify']
+        );
+
+    });
+
+Route::post(
+    '/webhooks/cinetpay',
+    [CinetPayController::class, 'webhook']
+);
 });
         /*
         |--------------------------------------------------------------------------
