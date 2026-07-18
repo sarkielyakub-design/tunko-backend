@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Throwable;
-
+use App\Http\Requests\Transfer\VerifyRecipientRequest;
 use App\Http\Resources\RecipientResource;
 use App\Models\Country;
 use App\Http\Resources\CountryResource;
@@ -405,7 +405,7 @@ public function searchRecipient(Request $request)
         ],
     ]);
 }
-public function verify(Request $request)
+public function verifyWalletRecipient(Request $request)
 {
     $request->validate([
         "query" => [
@@ -895,5 +895,16 @@ public function recipients(Request $request)
         "message" => "Recipients retrieved successfully.",
         "data" => $recipients,
     ]);
+}
+
+
+public function verify(
+    VerifyRecipientRequest $request
+)
+{
+    return $this->transferService
+        ->verifyRecipient(
+            $request->validated()
+        );
 }
 }

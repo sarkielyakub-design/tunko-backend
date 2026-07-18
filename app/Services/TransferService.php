@@ -270,4 +270,27 @@ class TransferService
             ];
         });
     }
+    public function verifyRecipient(
+    array $payload
+)
+{
+    /*
+    |--------------------------------------------------------------------------
+    | Provider Verification
+    |--------------------------------------------------------------------------
+    */
+
+    $recipient = $this->provider
+        ->verifyRecipient($payload);
+
+    return response()->json([
+
+        "success" => true,
+
+        "message" => "Recipient verified.",
+
+        "data" => $recipient,
+
+    ]);
+}
 }

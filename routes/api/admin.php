@@ -598,7 +598,10 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
 
 });
 
-
+Route::get(
+    '/admin/thunes/health',
+    [ThunesController::class, 'health']
+);
 /*
 |--------------------------------------------------------------------------
 | Offices

@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\ExchangeRateController;
 use App\Http\Controllers\Api\V1\DataController;
 use App\Http\Controllers\Api\V1\AirtimeController;
 use App\Http\Controllers\Api\V1\WalletDepositController;
+use App\Http\Controllers\Api\V1\WalletTransferController;
 require __DIR__.'/api/admin.php';
 /*
 |--------------------------------------------------------------------------
@@ -240,6 +241,23 @@ Route::prefix('transfer')->group(function () {
     Route::post("/beneficiaries", [BeneficiaryController::class, "store"]);
 
     Route::delete("/beneficiaries/{beneficiary}", [BeneficiaryController::class, "destroy"]);
+});
+
+
+Route::prefix('wallet-transfer')->group(function () {
+
+    Route::post('/verify', [WalletTransferController::class, 'verify']);
+
+    Route::post('/quote', [WalletTransferController::class, 'quote']);
+
+    Route::post('/send', [WalletTransferController::class, 'send']);
+
+    Route::get('/history', [WalletTransferController::class, 'history']);
+
+    Route::get('/receipt/{reference}', [WalletTransferController::class, 'receipt']);
+
+    Route::get('/beneficiaries', [WalletTransferController::class, 'beneficiaries']);
+
 });
 
         /*
