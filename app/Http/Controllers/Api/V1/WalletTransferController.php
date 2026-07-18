@@ -37,12 +37,14 @@ class WalletTransferController extends Controller
 
         } catch (Throwable $e) {
 
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ],422);
+    return response()->json([
+        'success' => false,
+        'message' => $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
+    ], 422);
 
-        }
+}
     }
 
     /**
