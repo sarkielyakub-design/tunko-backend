@@ -589,7 +589,14 @@ Route::prefix('data-bundles')->group(function () {
 });
 
 
+Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
 
+    Route::get(
+        '/reloadly/health',
+        [ReloadlyController::class, 'health']
+    );
+
+});
 
 
 /*

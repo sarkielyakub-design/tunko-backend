@@ -76,10 +76,13 @@ class AirtimeController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $provider = $this->airtimeService->purchase(
-            $request->validated()
-        );
-
+       $provider = $this->airtimeService->purchase([
+    "reference" => $reference,
+    "operator_id" => $request->operator_id,
+    "country_code" => $request->country_code,
+    "phone" => $request->phone,
+    "amount" => $request->amount,
+]);
         if (!$provider["success"]) {
 
             DB::rollBack();
@@ -256,12 +259,10 @@ public function networks($country)
 {
     return response()->json([
         "success" => true,
-        "data" => Network::where(
-                'country_id',
-                $country
-            )
-            ->where('supports_airtime', true)
+        "data" => Network::where('country_id', $country)
+            ->where('airtime_enabled', true)
             ->where('is_active', true)
+            ->orderBy('sort_order')
             ->orderBy('name')
             ->get(),
     ]);
@@ -301,5 +302,11 @@ public function beneficiaries(Request $request)
         "success" => true,
         "data" => $items,
     ]);
+}
+public function operators(int $countryId): Response
+{
+    return $this->http->get(
+        "/operators/countries/{$countryId}"
+    );
 }
 }
