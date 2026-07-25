@@ -6,9 +6,10 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 use App\Models\Admin;
-
+use App\Models\AdminWallet;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+
 
 class AdminSeeder extends Seeder
 {
@@ -121,7 +122,7 @@ class AdminSeeder extends Seeder
                 'admin'
             )->get()
         );
-
+        
         /*
         |--------------------------------------------------------------------------
         | Admin Account
@@ -151,5 +152,37 @@ class AdminSeeder extends Seeder
         $admin->assignRole(
             'Super Admin'
         );
+       $admin->assignRole(
+    'Super Admin'
+);
+
+/*
+|--------------------------------------------------------------------------
+| Admin Settlement Wallet
+|--------------------------------------------------------------------------
+*/
+
+AdminWallet::firstOrCreate(
+
+    [
+        'wallet_number' => 'TNK-XAF-001',
+    ],
+
+    [
+        'wallet_name' => 'Tunko Main Wallet',
+
+        'currency' => 'XAF',
+
+        'balance' => 10000000.00,
+
+        'status' => 'active',
+
+        'description' => 'Main settlement wallet for manual deposits',
+    ]
+
+);
+
+
     }
+    
 }

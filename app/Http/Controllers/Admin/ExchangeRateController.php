@@ -14,10 +14,28 @@ use App\Services\Admin\ExchangeRateService;
 
 class ExchangeRateController extends AdminController
 {
-    public function __construct(
-        protected ExchangeRateService $service
-    ) {
-    }
+ public function __construct(
+    protected ExchangeRateService $service
+) {
+    $this->middleware('permission:view exchange rates')->only([
+        'index',
+        'show',
+        'statistics',
+    ]);
+
+    $this->middleware('permission:create exchange rates')->only([
+        'store',
+    ]);
+
+    $this->middleware('permission:update exchange rates')->only([
+        'update',
+        'sync',
+    ]);
+
+    $this->middleware('permission:delete exchange rates')->only([
+        'destroy',
+    ]);
+}
 
     /**
      * List Exchange Rates
@@ -153,4 +171,5 @@ class ExchangeRateController extends AdminController
 
         );
     }
+    
 }

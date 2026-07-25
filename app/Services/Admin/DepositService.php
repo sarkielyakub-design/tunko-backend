@@ -1,7 +1,9 @@
 <?php
 
 namespace App\Services\Admin;
-
+use App\Models\AdminWallet;
+use App\Models\AdminWalletTransaction;
+use Illuminate\Support\Str;
 use App\Models\Deposit;
 use App\Models\Wallet;
 use App\Models\Transaction;
@@ -124,24 +126,61 @@ class DepositService
 
             }
 
-            if ($data['credit_wallet']) {
+            $adminWallet = AdminWallet::active()
+    ->lockForUpdate()
+    ->first();
 
-                $wallet = Wallet::where(
-                    'id',
-                    $deposit->wallet_id
-                )->lockForUpdate()->first();
+if (!$adminWallet) {
+    throw new \Exception('No active admin wallet found.');
+}
 
-                if ($wallet) {
+if (!$adminWallet->hasSufficientBalance($deposit->amount)) {
+    throw new \Exception('Insufficient admin wallet balance.');
+}
 
-                    $wallet->increment(
-                        'balance',
-                        $deposit->amount
-                    );
+$userWallet = Wallet::where(
+    'id',
+    $deposit->wallet_id
+)->lockForUpdate()->first();
 
-                }
+if (!$userWallet) {
+    throw new \Exception('User wallet not found.');
+}
 
-            }
 
+$after = $adminWallet->fresh()->balance;
+$before = $adminWallet->balance;
+
+$adminWallet->debit($deposit->amount);
+AdminWalletTransaction::create([
+
+    'admin_wallet_id' => $adminWallet->id,
+
+    'reference' => 'AWT-'.Str::upper(Str::random(12)),
+
+    'type' => 'debit',
+
+    'amount' => $deposit->amount,
+
+    'balance_before' => $before,
+
+    'balance_after' => $after,
+
+    'currency' => $deposit->currency,
+
+    'source' => 'manual_deposit',
+
+    'description' => 'Manual deposit approved',
+
+    'created_by' => Auth::guard('admin')->id(),
+
+]);
+
+
+$userWallet->increment(
+    'balance',
+    $deposit->amount
+);
             Transaction::create([
 
                 'user_id' => $deposit->user_id,

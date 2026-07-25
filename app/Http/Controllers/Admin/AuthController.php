@@ -12,34 +12,55 @@ class AuthController extends AdminController
      * Admin Login
      */
     public function login(Request $request)
-    {
+{
+    try {
+
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required'],
         ]);
 
+        \Log::info('Step 1');
+
         $guard = Auth::guard('admin');
 
+        \Log::info('Step 2');
+
         if (! $guard->attempt($credentials)) {
+
+            \Log::info('Invalid credentials');
+
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid credentials.',
             ], 401);
         }
 
-        /** @var \App\Models\Admin $admin */
+        \Log::info('Step 3');
+
         $admin = $guard->user();
+
+        \Log::info('Step 4');
 
         $token = $admin->createToken('admin-token')->plainTextToken;
 
+        \Log::info('Step 5');
+
         return response()->json([
             'success' => true,
-            'message' => 'Login successful.',
             'token' => $token,
             'admin' => $admin,
         ]);
-    }
 
+    } catch (\Throwable $e) {
+
+        \Log::error($e);
+
+        return response()->json([
+            'message' => $e->getMessage(),
+        ], 500);
+    }
+}
     /**
      * Admin Logout
      */

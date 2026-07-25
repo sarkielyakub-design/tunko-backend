@@ -17,7 +17,9 @@ use App\Http\Controllers\Admin\DepositController;
 use App\Http\Controllers\Admin\WithdrawalController;
 use App\Http\Controllers\Admin\ExchangeRateController;
 use App\Http\Controllers\Admin\OfficeController;
-
+use App\Http\Controllers\Admin\AdminWalletController;
+use App\Http\Controllers\Admin\ReloadlyController;
+use App\Http\Controllers\Admin\ThunesController;
 
 /*
 |--------------------------------------------------------------------------
@@ -341,6 +343,19 @@ Route::prefix('deposits')->group(function () {
         '/{deposit}/cancel',
         [DepositController::class, 'cancel']
     );
+    Route::prefix('admin-wallet')
+    ->controller(AdminWalletController::class)
+    ->group(function () {
+
+        Route::get('/', 'index');
+
+        Route::get('/transactions', 'transactions');
+
+        Route::post('/fund', 'fund');
+
+        Route::put('/{adminWallet}', 'update');
+
+    });
 
 });
             /*
