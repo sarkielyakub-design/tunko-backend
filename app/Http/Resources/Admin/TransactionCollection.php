@@ -20,6 +20,12 @@ class TransactionCollection extends ResourceCollection
                 $this->collection
             ),
 
+            /*
+            |--------------------------------------------------------------------------
+            | Pagination
+            |--------------------------------------------------------------------------
+            */
+
             'pagination' => [
 
                 'current_page' => $this->currentPage(),
@@ -33,6 +39,54 @@ class TransactionCollection extends ResourceCollection
                 'from' => $this->firstItem(),
 
                 'to' => $this->lastItem(),
+
+                'has_more_pages' => $this->hasMorePages(),
+
+            ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | Navigation
+            |--------------------------------------------------------------------------
+            */
+
+            'links' => [
+
+                'first' => $this->url(1),
+
+                'last' => $this->url($this->lastPage()),
+
+                'previous' => $this->previousPageUrl(),
+
+                'next' => $this->nextPageUrl(),
+
+            ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | Filters
+            |--------------------------------------------------------------------------
+            */
+
+            'filters' => [
+
+                'search' => $request->search,
+
+                'status' => $request->status,
+
+                'type' => $request->type,
+
+                'payment_gateway' => $request->payment_gateway,
+
+                'currency' => $request->currency,
+
+                'from_date' => $request->from_date,
+
+                'to_date' => $request->to_date,
+
+                'sort' => $request->sort,
+
+                'direction' => $request->direction,
 
             ],
 

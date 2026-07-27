@@ -11,99 +11,156 @@ class TransactionResource extends JsonResource
      * Transform the resource.
      */
     public function toArray(Request $request): array
-    {
-        return [
+{
+    return [
 
-            /*
-            |--------------------------------------------------------------------------
-            | Identity
-            |--------------------------------------------------------------------------
-            */
+        /*
+        |--------------------------------------------------------------------------
+        | Identity
+        |--------------------------------------------------------------------------
+        */
 
-            'id' => $this->id,
+        'id' => $this->id,
 
-            'reference' => $this->reference,
+        'reference' => $this->reference,
 
-            'gateway_reference' => $this->gateway_reference,
+        'gateway_reference' => $this->gateway_reference,
 
-            /*
-            |--------------------------------------------------------------------------
-            | Customer
-            |--------------------------------------------------------------------------
-            */
+        /*
+        |--------------------------------------------------------------------------
+        | Customer
+        |--------------------------------------------------------------------------
+        */
 
-            'user' => [
+        'user' => [
 
-                'id' => $this->user?->id,
+            'id' => $this->user?->id,
 
-                'name' => $this->user?->full_name,
+            'first_name' => $this->user?->first_name,
 
-                'email' => $this->user?->email,
+            'last_name' => $this->user?->last_name,
 
-                'phone' => $this->user?->phone,
+            'name' => $this->user?->full_name,
 
-            ],
+            'email' => $this->user?->email,
 
-            /*
-            |--------------------------------------------------------------------------
-            | Transaction
-            |--------------------------------------------------------------------------
-            */
+            'phone' => $this->user?->phone,
 
-            'type' => $this->type,
+        ],
 
-            'status' => $this->status,
+        /*
+        |--------------------------------------------------------------------------
+        | Transaction
+        |--------------------------------------------------------------------------
+        */
 
-            'payment_gateway' => $this->payment_gateway,
+        'type' => $this->type,
 
-            /*
-            |--------------------------------------------------------------------------
-            | Amount
-            |--------------------------------------------------------------------------
-            */
+        'status' => $this->status,
 
-            'amount' => (float) $this->amount,
+        'payment_gateway' => $this->payment_gateway,
 
-            'fee' => (float) $this->fee,
+        /*
+        |--------------------------------------------------------------------------
+        | Amount
+        |--------------------------------------------------------------------------
+        */
 
-            'total' => (float) $this->total,
+        'amount' => (float) $this->amount,
 
-            'currency' => $this->currency,
+        'fee' => (float) $this->fee,
 
-            /*
-            |--------------------------------------------------------------------------
-            | Description
-            |--------------------------------------------------------------------------
-            */
+        'total' => (float) $this->total,
 
-            'description' => $this->description,
+        'currency' => $this->currency,
 
-            /*
-            |--------------------------------------------------------------------------
-            | Metadata
-            |--------------------------------------------------------------------------
-            */
+        /*
+        |--------------------------------------------------------------------------
+        | Description
+        |--------------------------------------------------------------------------
+        */
 
-            'meta' => $this->meta,
+        'description' => $this->description,
 
-            /*
-            |--------------------------------------------------------------------------
-            | Dates
-            |--------------------------------------------------------------------------
-            */
+        /*
+        |--------------------------------------------------------------------------
+        | Metadata
+        |--------------------------------------------------------------------------
+        */
 
-            'completed_at' => optional(
-                $this->completed_at
-            )?->toDateTimeString(),
+        'meta' => $this->meta ?? [],
 
-            'created_at' => optional(
-                $this->created_at
-            )?->toDateTimeString(),
+        /*
+        |--------------------------------------------------------------------------
+        | Admin
+        |--------------------------------------------------------------------------
+        */
 
-            'updated_at' => optional(
-                $this->updated_at
-            )?->toDateTimeString(),
+        'admin' => [
 
-        ];
-    }
+            'id' => data_get($this->meta, 'admin_id'),
+
+            'name' => data_get($this->meta, 'admin_name'),
+
+            'updated_by' => data_get($this->meta, 'updated_by'),
+
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | Refund
+        |--------------------------------------------------------------------------
+        */
+
+        'refund' => [
+
+            'original_transaction' => data_get(
+                $this->meta,
+                'original_transaction'
+            ),
+
+            'refunded_at' => data_get(
+                $this->meta,
+                'refunded_at'
+            ),
+
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | Dates
+        |--------------------------------------------------------------------------
+        */
+
+        'completed_at' => optional(
+            $this->completed_at
+        )?->toDateTimeString(),
+
+        'created_at' => optional(
+            $this->created_at
+        )?->toDateTimeString(),
+
+        'updated_at' => optional(
+            $this->updated_at
+        )?->toDateTimeString(),
+
+        /*
+        |--------------------------------------------------------------------------
+        | UI Helpers
+        |--------------------------------------------------------------------------
+        */
+
+        'is_success' => $this->status === 'success',
+
+        'is_pending' => $this->status === 'pending',
+
+        'is_failed' => $this->status === 'failed',
+
+        'is_refunded' => $this->status === 'refunded',
+
+        'can_refund' => $this->status === 'success'
+            && $this->type !== 'refund',
+
+    ];
+}
 }

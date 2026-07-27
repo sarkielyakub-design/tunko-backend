@@ -228,7 +228,7 @@ $userWallet->increment(
             return $deposit->fresh()->load([
                 'user',
                 'wallet',
-            ]);
+            ]); 
 
         });
 

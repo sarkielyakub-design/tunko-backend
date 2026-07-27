@@ -18,7 +18,7 @@ class TransferService
         return Transfer::query()
 
             ->with([
-                'user',
+                'sender',
                 'recipient',
             ])
 
@@ -81,7 +81,7 @@ class TransferService
     ): Transfer {
 
         return $transfer->load([
-            'user',
+            'sender',
             'recipient',
         ]);
 
@@ -122,7 +122,7 @@ class TransferService
 
             return $transfer->fresh()
                 ->load([
-                    'user',
+                   'sender',
                     'recipient',
                 ]);
 
@@ -175,7 +175,7 @@ class TransferService
 
             return $transfer->fresh()
                 ->load([
-                    'user',
+                    'sender',
                     'recipient',
                 ]);
 
@@ -228,7 +228,7 @@ class TransferService
 
             return $transfer->fresh()
                 ->load([
-                    'user',
+                    'sender',
                     'recipient',
                 ]);
 
@@ -268,7 +268,7 @@ class TransferService
 
             return $transfer->fresh()
                 ->load([
-                    'user',
+                    'sender',
                     'recipient',
                 ]);
 
@@ -310,15 +310,12 @@ class TransferService
                 'cancelled'
             )->count(),
 
-            'total_volume' => Transfer::sum(
-                'amount'
-            ),
+            'total_volume' => Transfer::sum('total'),
 
-            'today_volume' => Transfer::whereDate(
-                'created_at',
-                today()
-            )->sum('amount'),
-
+'today_volume' => Transfer::whereDate(
+    'created_at',
+    today()
+)->sum('total'),
         ];
     }
 }
