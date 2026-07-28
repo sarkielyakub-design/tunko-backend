@@ -31,11 +31,8 @@ class UserController extends AdminController
      */
     public function index(Request $request)
 {
-    $query = User::query()
-        ->with([
-            "wallet",
-            "country",
-        ]);
+   $query = User::query()
+    ->with('wallet');
 
     if ($request->filled("search")) {
 
