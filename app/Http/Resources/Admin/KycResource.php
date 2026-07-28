@@ -46,6 +46,32 @@ class KycResource extends JsonResource
 
             /*
             |--------------------------------------------------------------------------
+            | Personal Information
+            |--------------------------------------------------------------------------
+            */
+
+            'first_name' => $this->first_name,
+
+            'last_name' => $this->last_name,
+
+            'middle_name' => $this->middle_name,
+
+            'date_of_birth' => optional(
+                $this->date_of_birth
+            )?->toDateString(),
+
+            'gender' => $this->gender,
+
+            'marital_status' => $this->marital_status,
+
+            'nationality' => $this->nationality,
+
+            'occupation' => $this->occupation,
+
+            'source_of_income' => $this->source_of_income,
+
+            /*
+            |--------------------------------------------------------------------------
             | KYC
             |--------------------------------------------------------------------------
             */
@@ -54,25 +80,33 @@ class KycResource extends JsonResource
 
             'status' => $this->status,
 
-            'document_type' => $this->document_type,
-
-            'document_number' => $this->document_number,
-
-            'document_country' => $this->document_country,
+            'is_verified' => (bool) $this->is_verified,
 
             /*
             |--------------------------------------------------------------------------
-            | Documents
+            | Document
             |--------------------------------------------------------------------------
             */
 
-            'front_image' => $this->front_image,
+            'document_type' => $this->document_type,
 
-            'back_image' => $this->back_image,
+            'document_country' => $this->document_country,
 
-            'selfie_image' => $this->selfie_image,
+            'id_type' => $this->id_type,
 
-            'proof_of_address' => $this->proof_of_address,
+            'id_number' => $this->id_number,
+
+            /*
+            |--------------------------------------------------------------------------
+            | Uploaded Documents
+            |--------------------------------------------------------------------------
+            */
+
+            'id_front' => $this->id_front,
+
+            'id_back' => $this->id_back,
+
+            'selfie' => $this->selfie,
 
             /*
             |--------------------------------------------------------------------------
@@ -84,29 +118,31 @@ class KycResource extends JsonResource
 
             'provider_reference' => $this->provider_reference,
 
-            'is_verified' => (bool) $this->is_verified,
-
             /*
             |--------------------------------------------------------------------------
             | Review
             |--------------------------------------------------------------------------
             */
 
-            'reviewed_by' => $this->reviewer?->name,
+            'reviewed_by' => [
+
+                'id' => $this->reviewer?->id,
+
+                'name' => $this->reviewer?->name,
+
+            ],
+
+            'admin_note' => $this->admin_note,
 
             'rejection_reason' => $this->rejection_reason,
 
-            'admin_note' => $this->admin_note,
+            'reject_code' => $this->reject_code,
 
             /*
             |--------------------------------------------------------------------------
             | Dates
             |--------------------------------------------------------------------------
             */
-
-            'submitted_at' => optional(
-                $this->submitted_at
-            )?->toDateTimeString(),
 
             'reviewed_at' => optional(
                 $this->reviewed_at
@@ -122,6 +158,10 @@ class KycResource extends JsonResource
 
             'created_at' => optional(
                 $this->created_at
+            )?->toDateTimeString(),
+
+            'updated_at' => optional(
+                $this->updated_at
             )?->toDateTimeString(),
 
         ];

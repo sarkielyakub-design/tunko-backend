@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Admin\AdminController;
-use App\Http\Requests\Admin\Kyc\IndexKycRequest;
 use App\Http\Requests\Admin\Kyc\ApproveKycRequest;
+use App\Http\Requests\Admin\Kyc\IndexKycRequest;
 use App\Http\Requests\Admin\Kyc\RejectKycRequest;
 use App\Http\Resources\Admin\KycCollection;
 use App\Http\Resources\Admin\KycResource;
 use App\Models\Kyc;
 use App\Services\Admin\KycService;
+use Illuminate\Http\JsonResponse;
 
 class KycController extends AdminController
 {
@@ -23,14 +24,11 @@ class KycController extends AdminController
      */
     public function index(
         IndexKycRequest $request
-    )
-    {
+    ): KycCollection {
         return new KycCollection(
-
             $this->service->index(
                 $request->validated()
             )
-
         );
     }
 
@@ -39,18 +37,11 @@ class KycController extends AdminController
      */
     public function show(
         Kyc $kyc
-    )
-    {
+    ): JsonResponse {
         return $this->success(
-
             new KycResource(
-
-                $this->service->show(
-                    $kyc
-                )
-
+                $this->service->show($kyc)
             )
-
         );
     }
 
@@ -60,22 +51,15 @@ class KycController extends AdminController
     public function approve(
         ApproveKycRequest $request,
         Kyc $kyc
-    )
-    {
+    ): JsonResponse {
         $kyc = $this->service->approve(
-
             $kyc,
-
             $request->validated()
-
         );
 
         return $this->success(
-
             new KycResource($kyc),
-
             'KYC approved successfully.'
-
         );
     }
 
@@ -85,34 +69,25 @@ class KycController extends AdminController
     public function reject(
         RejectKycRequest $request,
         Kyc $kyc
-    )
-    {
+    ): JsonResponse {
         $kyc = $this->service->reject(
-
             $kyc,
-
             $request->validated()
-
         );
 
         return $this->success(
-
             new KycResource($kyc),
-
             'KYC rejected successfully.'
-
         );
     }
 
     /**
-     * Statistics
+     * KYC Statistics
      */
-    public function statistics()
+    public function statistics(): JsonResponse
     {
         return $this->success(
-
             $this->service->statistics()
-
         );
     }
 }

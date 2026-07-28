@@ -4,6 +4,7 @@ namespace App\Services\Admin;
 
 use App\Models\Kyc;
 use App\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -12,7 +13,7 @@ class KycService
     /**
      * List KYC
      */
-    public function index(array $filters)
+    public function index(array $filters): LengthAwarePaginator
     {
         return Kyc::query()
 
@@ -39,22 +40,22 @@ class KycService
 
             ->when(
                 $filters['status'] ?? null,
-                fn($q, $status) => $q->where('status', $status)
+                fn ($q, $status) => $q->where('status', $status)
             )
 
             ->when(
                 $filters['level'] ?? null,
-                fn($q, $level) => $q->where('level', $level)
+                fn ($q, $level) => $q->where('level', $level)
             )
 
             ->when(
                 $filters['document_type'] ?? null,
-                fn($q, $type) => $q->where('document_type', $type)
+                fn ($q, $type) => $q->where('document_type', $type)
             )
 
             ->when(
                 $filters['country'] ?? null,
-                fn($q, $country) => $q->where('document_country', $country)
+                fn ($q, $country) => $q->where('document_country', $country)
             )
 
             ->latest()
@@ -65,7 +66,7 @@ class KycService
     }
 
     /**
-     * Show
+     * Show KYC
      */
     public function show(Kyc $kyc): Kyc
     {
@@ -107,19 +108,10 @@ class KycService
 
             ]);
 
-            $user = User::find(
-                $kyc->user_id
-            );
-
-            if ($user) {
-
-                $user->update([
-
+            User::findOrFail($kyc->user_id)
+                ->update([
                     'is_verified' => true,
-
                 ]);
-
-            }
 
             return $kyc->fresh()->load([
                 'user',
@@ -131,7 +123,7 @@ class KycService
     }
 
     /**
-     * Reject
+     * Reject KYC
      */
     public function reject(
         Kyc $kyc,
@@ -176,25 +168,13 @@ class KycService
 
             'total' => Kyc::count(),
 
-            'pending' => Kyc::where(
-                'status',
-                'pending'
-            )->count(),
+            'pending' => Kyc::pending()->count(),
 
-            'approved' => Kyc::where(
-                'status',
-                'approved'
-            )->count(),
+            'approved' => Kyc::approved()->count(),
 
-            'rejected' => Kyc::where(
-                'status',
-                'rejected'
-            )->count(),
+            'rejected' => Kyc::rejected()->count(),
 
-            'under_review' => Kyc::where(
-                'status',
-                'under_review'
-            )->count(),
+            'under_review' => Kyc::underReview()->count(),
 
         ];
     }

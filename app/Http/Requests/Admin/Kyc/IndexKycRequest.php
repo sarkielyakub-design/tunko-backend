@@ -29,13 +29,10 @@ class IndexKycRequest extends FormRequest
             */
 
             'search' => [
-
+                'bail',
                 'nullable',
-
                 'string',
-
                 'max:150',
-
             ],
 
             /*
@@ -45,103 +42,71 @@ class IndexKycRequest extends FormRequest
             */
 
             'status' => [
-
+                'bail',
                 'nullable',
-
                 Rule::in([
-
                     'pending',
-
                     'under_review',
-
                     'approved',
-
                     'rejected',
-
                     'expired',
-
                 ]),
-
             ],
 
             'level' => [
-
+                'bail',
                 'nullable',
-
                 Rule::in([
-
                     1,
-
                     2,
-
                     3,
-
                     4,
-
                 ]),
-
             ],
 
             'country' => [
-
+                'bail',
                 'nullable',
-
                 'string',
-
                 'max:100',
-
             ],
 
             'document_type' => [
-
+                'bail',
                 'nullable',
-
                 Rule::in([
-
                     'passport',
-
                     'national_id',
-
                     'drivers_license',
-
                     'residence_permit',
-
                     'voter_card',
-
                 ]),
-
             ],
 
             'user_id' => [
-
+                'bail',
                 'nullable',
-
+                'integer',
                 'exists:users,id',
-
             ],
 
             /*
             |--------------------------------------------------------------------------
-            | Date
+            | Date Filters
             |--------------------------------------------------------------------------
             */
 
             'from_date' => [
-
+                'bail',
                 'nullable',
-
                 'date',
-
             ],
 
             'to_date' => [
-
+                'bail',
                 'nullable',
-
                 'date',
-
                 'after_or_equal:from_date',
-
             ],
 
             /*
@@ -151,33 +116,22 @@ class IndexKycRequest extends FormRequest
             */
 
             'sort' => [
-
+                'bail',
                 'nullable',
-
                 Rule::in([
-
                     'created_at',
-
                     'status',
-
                     'level',
-
                 ]),
-
             ],
 
             'direction' => [
-
+                'bail',
                 'nullable',
-
                 Rule::in([
-
                     'asc',
-
                     'desc',
-
                 ]),
-
             ],
 
             /*
@@ -186,18 +140,20 @@ class IndexKycRequest extends FormRequest
             |--------------------------------------------------------------------------
             */
 
-            'per_page' => [
-
+            'page' => [
+                'bail',
                 'nullable',
-
                 'integer',
-
-                'min:10',
-
-                'max:100',
-
+                'min:1',
             ],
 
+            'per_page' => [
+                'bail',
+                'nullable',
+                'integer',
+                'min:10',
+                'max:100',
+            ],
         ];
     }
 
@@ -208,11 +164,13 @@ class IndexKycRequest extends FormRequest
     {
         $this->merge([
 
-            'sort' => $this->sort ?? 'created_at',
+            'sort' => $this->input('sort', 'created_at'),
 
-            'direction' => $this->direction ?? 'desc',
+            'direction' => $this->input('direction', 'desc'),
 
-            'per_page' => $this->per_page ?? 20,
+            'per_page' => $this->input('per_page', 20),
+
+            'page' => $this->input('page', 1),
 
         ]);
     }

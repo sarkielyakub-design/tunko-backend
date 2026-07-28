@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin\Kyc;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class RejectKycRequest extends FormRequest
 {
@@ -28,15 +29,11 @@ class RejectKycRequest extends FormRequest
             */
 
             'reason' => [
-
+                'bail',
                 'required',
-
                 'string',
-
                 'min:10',
-
                 'max:500',
-
             ],
 
             /*
@@ -46,11 +43,19 @@ class RejectKycRequest extends FormRequest
             */
 
             'reject_code' => [
-
+                'bail',
                 'required',
-
-                'in:document_blurry,document_expired,document_invalid,selfie_mismatch,duplicate_account,address_invalid,information_mismatch,fraud_suspected,other',
-
+                Rule::in([
+                    'document_blurry',
+                    'document_expired',
+                    'document_invalid',
+                    'selfie_mismatch',
+                    'duplicate_account',
+                    'address_invalid',
+                    'information_mismatch',
+                    'fraud_suspected',
+                    'other',
+                ]),
             ],
 
             /*
@@ -60,11 +65,9 @@ class RejectKycRequest extends FormRequest
             */
 
             'allow_resubmission' => [
-
+                'bail',
                 'nullable',
-
                 'boolean',
-
             ],
 
             /*
@@ -74,27 +77,22 @@ class RejectKycRequest extends FormRequest
             */
 
             'note' => [
-
+                'bail',
                 'nullable',
-
                 'string',
-
                 'max:1000',
-
             ],
 
             /*
             |--------------------------------------------------------------------------
-            | Notify Customer
+            | Notify User
             |--------------------------------------------------------------------------
             */
 
             'notify_user' => [
-
+                'bail',
                 'nullable',
-
                 'boolean',
-
             ],
 
         ];
@@ -107,13 +105,15 @@ class RejectKycRequest extends FormRequest
     {
         $this->merge([
 
-            'notify_user' => $this->has('notify_user')
-                ? $this->boolean('notify_user')
-                : true,
+            'notify_user' => $this->boolean(
+                'notify_user',
+                true
+            ),
 
-            'allow_resubmission' => $this->has('allow_resubmission')
-                ? $this->boolean('allow_resubmission')
-                : true,
+            'allow_resubmission' => $this->boolean(
+                'allow_resubmission',
+                true
+            ),
 
         ]);
     }
@@ -125,13 +125,17 @@ class RejectKycRequest extends FormRequest
     {
         return [
 
-            'reason.required' => 'Rejection reason is required.',
+            'reason.required' =>
+                'Rejection reason is required.',
 
-            'reason.min' => 'Please provide a detailed rejection reason.',
+            'reason.min' =>
+                'Please provide a detailed rejection reason.',
 
-            'reject_code.required' => 'Reject code is required.',
+            'reject_code.required' =>
+                'Reject code is required.',
 
-            'reject_code.in' => 'Invalid rejection code selected.',
+            'reject_code.in' =>
+                'The selected rejection code is invalid.',
 
         ];
     }

@@ -8,7 +8,7 @@ use Illuminate\Http\Resources\Json\ResourceCollection;
 class KycCollection extends ResourceCollection
 {
     /**
-     * Transform the resource collection.
+     * Transform the resource collection into an array.
      */
     public function toArray(Request $request): array
     {
@@ -34,31 +34,21 @@ class KycCollection extends ResourceCollection
 
                 'to' => $this->lastItem(),
 
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | Summary
-            |--------------------------------------------------------------------------
-            */
-
-            'summary' => [
-
-                'total' => $this->total(),
-
-                'pending' => $this->collection
-                    ->where('status', 'pending')
-                    ->count(),
-
-                'approved' => $this->collection
-                    ->where('status', 'approved')
-                    ->count(),
-
-                'rejected' => $this->collection
-                    ->where('status', 'rejected')
-                    ->count(),
+                'has_more_pages' => $this->hasMorePages(),
 
             ],
+
+        ];
+    }
+
+    /**
+     * Additional response data.
+     */
+    public function with(Request $request): array
+    {
+        return [
+
+            'message' => 'KYC records retrieved successfully.',
 
         ];
     }

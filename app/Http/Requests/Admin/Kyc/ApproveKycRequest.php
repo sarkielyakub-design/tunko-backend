@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin\Kyc;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ApproveKycRequest extends FormRequest
 {
@@ -28,15 +29,15 @@ class ApproveKycRequest extends FormRequest
             */
 
             'kyc_level' => [
-
+                'bail',
                 'required',
-
                 'integer',
-
-                'min:1',
-
-                'max:4',
-
+                Rule::in([
+                    1,
+                    2,
+                    3,
+                    4,
+                ]),
             ],
 
             /*
@@ -46,13 +47,10 @@ class ApproveKycRequest extends FormRequest
             */
 
             'note' => [
-
+                'bail',
                 'nullable',
-
                 'string',
-
                 'max:1000',
-
             ],
 
             /*
@@ -62,13 +60,15 @@ class ApproveKycRequest extends FormRequest
             */
 
             'verification_provider' => [
-
+                'bail',
                 'nullable',
-
-                'string',
-
-                'max:100',
-
+                Rule::in([
+                    'manual',
+                    'sumsub',
+                    'smile_identity',
+                    'veriff',
+                    'onfido',
+                ]),
             ],
 
             /*
@@ -78,13 +78,10 @@ class ApproveKycRequest extends FormRequest
             */
 
             'provider_reference' => [
-
+                'bail',
                 'nullable',
-
                 'string',
-
                 'max:255',
-
             ],
 
             /*
@@ -94,25 +91,21 @@ class ApproveKycRequest extends FormRequest
             */
 
             'notify_user' => [
-
+                'bail',
                 'nullable',
-
                 'boolean',
-
             ],
 
             /*
             |--------------------------------------------------------------------------
-            | Increase Limits
+            | Update Transaction Limits
             |--------------------------------------------------------------------------
             */
 
             'update_transaction_limits' => [
-
+                'bail',
                 'nullable',
-
                 'boolean',
-
             ],
 
         ];
@@ -125,13 +118,15 @@ class ApproveKycRequest extends FormRequest
     {
         $this->merge([
 
-            'notify_user' => $this->has('notify_user')
-                ? $this->boolean('notify_user')
-                : true,
+            'notify_user' => $this->boolean(
+                'notify_user',
+                true
+            ),
 
-            'update_transaction_limits' => $this->has('update_transaction_limits')
-                ? $this->boolean('update_transaction_limits')
-                : true,
+            'update_transaction_limits' => $this->boolean(
+                'update_transaction_limits',
+                true
+            ),
 
         ]);
     }
@@ -145,9 +140,10 @@ class ApproveKycRequest extends FormRequest
 
             'kyc_level.required' => 'KYC level is required.',
 
-            'kyc_level.min' => 'Invalid KYC level.',
+            'kyc_level.in' => 'The selected KYC level is invalid.',
 
-            'kyc_level.max' => 'Invalid KYC level.',
+            'verification_provider.in' =>
+                'The selected verification provider is invalid.',
 
         ];
     }
