@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
-
+use Illuminate\Http\Request;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Requests\Admin\User\IndexUserRequest;
 use App\Http\Requests\Admin\User\StoreUserRequest;

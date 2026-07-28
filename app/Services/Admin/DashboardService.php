@@ -50,10 +50,7 @@ class DashboardService
 
                     "total" => Wallet::count(),
 
-                    "active" => Wallet::where(
-                        "status",
-                        "active"
-                    )->count(),
+                    "active" => Wallet::where('is_active', true)->count(),
 
                     "total_balance" => Wallet::sum(
                         "balance"
