@@ -138,13 +138,14 @@ if (!$adminWallet->hasSufficientBalance($deposit->amount)) {
     throw new \Exception('Insufficient admin wallet balance.');
 }
 
-$userWallet = Wallet::where(
-    'id',
-    $deposit->wallet_id
-)->lockForUpdate()->first();
+$deposit->refresh();
+
+$userWallet = Wallet::lockForUpdate()->find($deposit->wallet_id);
 
 if (!$userWallet) {
-    throw new \Exception('User wallet not found.');
+    throw new \Exception(
+        'User wallet not found. wallet_id=' . ($deposit->wallet_id ?? 'NULL')
+    );
 }
 
 
