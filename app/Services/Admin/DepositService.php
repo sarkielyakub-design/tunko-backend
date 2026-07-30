@@ -205,25 +205,26 @@ $userWallet->increment(
 
             ]);
 
-            $deposit->update([
+          $deposit->update([
 
-                'status' => 'completed',
+    'status' => 'completed',
 
-                'gateway_reference' => $data['gateway_reference'],
+    // Manual deposit defaults
+    'gateway_reference' => $deposit->reference,
 
-                'provider_status' => $data['provider_status'],
+    'provider_status' => 'approved',
 
-                'provider_response' => $data['provider_response'] ?? null,
+    'provider_response' => 'Approved manually by administrator',
 
-                'approved_by' => Auth::guard('admin')->id(),
+    'approved_by' => Auth::guard('admin')->id(),
 
-                'approved_at' => now(),
+    'approved_at' => now(),
 
-                'completed_at' => now(),
+    'completed_at' => now(),
 
-                'admin_note' => $data['note'] ?? null,
+    'admin_note' => $data['note'] ?? null,
 
-            ]);
+]);
 
             return $deposit->fresh()->load([
                 'user',

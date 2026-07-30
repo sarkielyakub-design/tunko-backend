@@ -23,64 +23,13 @@ class ApproveDepositRequest extends FormRequest
 
             /*
             |--------------------------------------------------------------------------
-            | Gateway Reference
-            |--------------------------------------------------------------------------
-            */
-
-            'gateway_reference' => [
-
-                'required',
-
-                'string',
-
-                'max:255',
-
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | Provider Status
-            |--------------------------------------------------------------------------
-            */
-
-            'provider_status' => [
-
-                'required',
-
-                'string',
-
-                'max:100',
-
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | Provider Response
-            |--------------------------------------------------------------------------
-            */
-
-            'provider_response' => [
-
-                'nullable',
-
-                'string',
-
-                'max:5000',
-
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
             | Credit Wallet
             |--------------------------------------------------------------------------
             */
 
             'credit_wallet' => [
-
                 'nullable',
-
                 'boolean',
-
             ],
 
             /*
@@ -90,11 +39,8 @@ class ApproveDepositRequest extends FormRequest
             */
 
             'notify_user' => [
-
                 'nullable',
-
                 'boolean',
-
             ],
 
             /*
@@ -104,13 +50,9 @@ class ApproveDepositRequest extends FormRequest
             */
 
             'note' => [
-
                 'nullable',
-
                 'string',
-
                 'max:1000',
-
             ],
 
         ];
@@ -141,9 +83,7 @@ class ApproveDepositRequest extends FormRequest
     {
         return [
 
-            'gateway_reference.required' => 'Gateway reference is required.',
-
-            'provider_status.required' => 'Provider status is required.',
+            'note.max' => 'Admin note cannot exceed 1000 characters.',
 
         ];
     }
