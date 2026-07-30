@@ -73,7 +73,7 @@ Route::prefix('v1')->group(function () {
         [WalletDepositController::class, 'verify']
     );
 Route::post(
-    'wallet/deposit/request',
+    '/deposit/request',
     [WalletDepositController::class, 'requestDeposit']
 );
     Route::middleware('auth:sanctum')
