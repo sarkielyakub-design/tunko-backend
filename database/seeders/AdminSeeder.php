@@ -162,7 +162,7 @@ class AdminSeeder extends Seeder
 |--------------------------------------------------------------------------
 */
 
-AdminWallet::firstOrCreate(
+AdminWallet::updateOrCreate(
 
     [
         'wallet_number' => 'TNK-XAF-001',
