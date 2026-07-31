@@ -184,28 +184,29 @@ $userWallet->increment(
 );
             Transaction::create([
 
-                'user_id' => $deposit->user_id,
+    'user_id' => $deposit->user_id,
 
-                'reference' => $deposit->reference,
+    'reference' => $deposit->reference,
 
-                'type' => 'deposit',
+    'type' => 'deposit',
 
-                'amount' => $deposit->amount,
+    'amount' => $deposit->amount,
 
-                'fee' => $deposit->fee,
+    'fee' => $deposit->fee,
 
-                'total' => $deposit->total,
+    'total' => $deposit->amount,
 
-                'currency' => $deposit->currency,
+    'status' => 'completed',
 
-                'status' => 'success',
+    'description' => 'Manual Wallet Deposit',
 
-                'payment_gateway' => $deposit->gateway,
+    'meta' => [
+        'gateway' => 'manual',
+        'payment_method' => $deposit->payment_method,
+        'wallet_id' => $userWallet->id,
+    ],
 
-                'description' => 'Wallet Deposit',
-
-            ]);
-
+]);
           $deposit->update([
 
     'status' => 'completed',
