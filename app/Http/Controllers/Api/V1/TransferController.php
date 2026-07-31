@@ -194,31 +194,20 @@ $transfer = Transfer::create([
 */
 
 Transaction::create([
-
-    "user_id" => $sender->id,
-
-    "reference" => $reference,
-
-    "type" => "wallet_transfer",
-
-    "title" => "Wallet Transfer",
-
-    "description" => "Transfer to ".$recipient->full_name,
-
-    "amount" => $request->amount,
-
-    "currency" => $sender->wallet->currency,
-
-    "fee" => $fee,
-
-    "total" => $total,
-
-    "status" => "completed",
-
-    "recipient" => $recipient->full_name,
-
-    "sender" => $sender->full_name,
-
+    'user_id' => $sender->id,
+    'reference' => $reference,
+    'type' => 'transfer',
+    'amount' => $request->amount,
+    'fee' => $fee,
+    'total' => $total,
+    'status' => 'completed',
+    'description' => 'Transfer to '.$recipient->full_name,
+    'meta' => [
+        'direction' => 'debit',
+        'currency' => $sender->wallet->currency,
+        'recipient_id' => $recipient->id,
+        'recipient_name' => $recipient->full_name,
+    ],
 ]);
 
 /*
@@ -228,33 +217,21 @@ Transaction::create([
 */
 
 Transaction::create([
-
-    "user_id" => $recipient->id,
-
-    "reference" => $reference,
-
-    "type" => "wallet_received",
-
-    "title" => "Wallet Credit",
-
-    "description" => "Received from ".$sender->full_name,
-
-    "amount" => $request->amount,
-
-    "currency" => $recipient->wallet->currency,
-
-    "fee" => 0,
-
-    "total" => $request->amount,
-
-    "status" => "completed",
-
-    "recipient" => $recipient->full_name,
-
-    "sender" => $sender->full_name,
-
+    'user_id' => $recipient->id,
+    'reference' => $reference,
+    'type' => 'transfer',
+    'amount' => $request->amount,
+    'fee' => 0,
+    'total' => $request->amount,
+    'status' => 'completed',
+    'description' => 'Received from '.$sender->full_name,
+    'meta' => [
+        'direction' => 'credit',
+        'currency' => $recipient->wallet->currency,
+        'sender_id' => $sender->id,
+        'sender_name' => $sender->full_name,
+    ],
 ]);
-
 /*
 |--------------------------------------------------------------------------
 | Save Recipient
@@ -907,4 +884,5 @@ public function verify(
             $request->validated()
         );
 }
+
 }
