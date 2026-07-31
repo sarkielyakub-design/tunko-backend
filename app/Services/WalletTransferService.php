@@ -181,44 +181,38 @@ class WalletTransferService
         ]);
 
         // Sender transaction
-        Transaction::create([
-            'user_id' => $sender->id,
-            'wallet_id' => $senderWallet->id,
-            'type' => 'debit',
-            'amount' => $amount,
-            'fee' => $fee,
-            'reference' => $reference,
-            'status' => 'completed',
-            'description' => 'Wallet transfer to ' .
-                $recipient->first_name . ' ' . $recipient->last_name,
-        ]);
-
-        // Recipient transaction
-      Transaction::create([
-
-    'user_id' => $recipient->id,
-
+       Transaction::create([
+    'user_id' => $sender->id,
     'reference' => $reference,
-
     'type' => 'transfer',
-
     'amount' => $amount,
-
-    'fee' => 0,
-
-    'total' => $amount,
-
+    'fee' => $fee,
+    'total' => $total,
     'status' => 'completed',
-
+    'description' => 'Wallet transfer to ' .
+        $recipient->first_name . ' ' . $recipient->last_name,
+    'meta' => [
+        'direction' => 'debit',
+        'wallet_id' => $senderWallet->id,
+        'recipient_id' => $recipient->id,
+    ],
+]);
+        // Recipient transaction
+     Transaction::create([
+    'user_id' => $recipient->id,
+    'reference' => $reference,
+    'type' => 'transfer',
+    'amount' => $amount,
+    'fee' => 0,
+    'total' => $amount,
+    'status' => 'completed',
     'description' => 'Wallet transfer from ' .
         $sender->first_name . ' ' . $sender->last_name,
-
     'meta' => [
+        'direction' => 'credit',
         'wallet_id' => $recipientWallet->id,
         'sender_id' => $sender->id,
-        'direction' => 'credit',
     ],
-
 ]);
         return [
             'reference' => $transfer->reference,
