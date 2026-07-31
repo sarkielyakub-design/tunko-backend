@@ -188,24 +188,38 @@ class WalletTransferService
             'amount' => $amount,
             'fee' => $fee,
             'reference' => $reference,
-            'status' => 'success',
+            'status' => 'completed',
             'description' => 'Wallet transfer to ' .
                 $recipient->first_name . ' ' . $recipient->last_name,
         ]);
 
         // Recipient transaction
-        Transaction::create([
-            'user_id' => $recipient->id,
-            'wallet_id' => $recipientWallet->id,
-            'type' => 'credit',
-            'amount' => $amount,
-            'fee' => 0,
-            'reference' => $reference,
-            'status' => 'success',
-            'description' => 'Wallet transfer from ' .
-                $sender->first_name . ' ' . $sender->last_name,
-        ]);
+      Transaction::create([
 
+    'user_id' => $recipient->id,
+
+    'reference' => $reference,
+
+    'type' => 'transfer',
+
+    'amount' => $amount,
+
+    'fee' => 0,
+
+    'total' => $amount,
+
+    'status' => 'completed',
+
+    'description' => 'Wallet transfer from ' .
+        $sender->first_name . ' ' . $sender->last_name,
+
+    'meta' => [
+        'wallet_id' => $recipientWallet->id,
+        'sender_id' => $sender->id,
+        'direction' => 'credit',
+    ],
+
+]);
         return [
             'reference' => $transfer->reference,
             'status' => $transfer->status,
