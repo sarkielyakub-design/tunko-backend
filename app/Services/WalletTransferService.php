@@ -76,9 +76,8 @@ class WalletTransferService
     /**
      * Send money.
      */
-   public function send(User $sender, array $data): array
+public function send(User $sender, array $data): array
 {
-    // Load sender wallet
     $sender->load('wallet');
 
     if (!$sender->wallet) {
@@ -89,7 +88,6 @@ class WalletTransferService
         throw new Exception('Your wallet is inactive.');
     }
 
-    // Verify transaction PIN
     if (
         empty($sender->transaction_pin) ||
         !Hash::check($data['pin'], $sender->transaction_pin)
@@ -97,7 +95,6 @@ class WalletTransferService
         throw new Exception('Invalid transaction PIN.');
     }
 
-    // Find recipient
     $recipient = User::query()
         ->where('email', $data['recipient'])
         ->orWhere('phone', $data['recipient'])
@@ -112,21 +109,25 @@ class WalletTransferService
         throw new Exception('Recipient not found.');
     }
 
-    if ($recipient->id == $sender->id) {
+    if ($recipient->id === $sender->id) {
         throw new Exception('You cannot transfer to yourself.');
     }
 
-    if (!$recipient->wallet || !$recipient->wallet->is_active) {
-        throw new Exception('Recipient wallet is unavailable.');
+    if (!$recipient->wallet) {
+        throw new Exception('Recipient wallet not found.');
     }
 
-    $amount = (float) $data['amount'];
+    if (!$recipient->wallet->is_active) {
+        throw new Exception('Recipient wallet is inactive.');
+    }
+
+    $amount = (float)$data['amount'];
 
     if ($amount <= 0) {
-        throw new Exception('Invalid transfer amount.');
+        throw new Exception('Invalid amount.');
     }
 
-    $fee = 0.00;
+    $fee = 0;
     $total = $amount + $fee;
 
     if ($sender->wallet->balance < $total) {
@@ -145,26 +146,27 @@ class WalletTransferService
         $data
     ) {
 
-        // Lock wallets
-        $senderWallet = Wallet::whereKey($sender->wallet->id)
-            ->lockForUpdate()
-            ->first();
+        $senderWallet = Wallet::lockForUpdate()->findOrFail(
+            $sender->wallet->id
+        );
 
-        $recipientWallet = Wallet::whereKey($recipient->wallet->id)
-            ->lockForUpdate()
-            ->first();
+        $recipientWallet = Wallet::lockForUpdate()->findOrFail(
+            $recipient->wallet->id
+        );
 
         if ($senderWallet->balance < $total) {
             throw new Exception('Insufficient wallet balance.');
         }
 
         // Debit sender
-        $senderWallet->decrement('balance', $total);
+        $senderWallet->balance -= $total;
+        $senderWallet->save();
 
         // Credit recipient
-        $recipientWallet->increment('balance', $amount);
+        $recipientWallet->balance += $amount;
+        $recipientWallet->save();
 
-        // Create transfer record
+        // Transfer record
         $transfer = WalletTransfer::create([
             'reference' => $reference,
             'sender_id' => $sender->id,
@@ -181,57 +183,60 @@ class WalletTransferService
         ]);
 
         // Sender transaction
-       Transaction::create([
-    'user_id' => $sender->id,
-    'reference' => $reference,
-    'type' => 'transfer',
-    'amount' => $amount,
-    'fee' => $fee,
-    'total' => $total,
-    'status' => 'completed',
-    'description' => 'Wallet transfer to ' .
-        $recipient->first_name . ' ' . $recipient->last_name,
-    'meta' => [
-        'direction' => 'debit',
-        'wallet_id' => $senderWallet->id,
-        'recipient_id' => $recipient->id,
-    ],
-]);
+        Transaction::create([
+            'user_id' => $sender->id,
+            'reference' => $reference,
+            'type' => 'transfer',
+            'amount' => $amount,
+            'fee' => $fee,
+            'total' => $total,
+            'status' => 'completed',
+            'description' => 'Transfer to '.$recipient->first_name.' '.$recipient->last_name,
+            'meta' => [
+                'wallet_id' => $senderWallet->id,
+                'direction' => 'debit',
+                'recipient_id' => $recipient->id,
+            ],
+        ]);
+
         // Recipient transaction
-     Transaction::create([
-    'user_id' => $recipient->id,
-    'reference' => $reference,
-    'type' => 'transfer',
-    'amount' => $amount,
-    'fee' => 0,
-    'total' => $amount,
-    'status' => 'completed',
-    'description' => 'Wallet transfer from ' .
-        $sender->first_name . ' ' . $sender->last_name,
-    'meta' => [
-        'direction' => 'credit',
-        'wallet_id' => $recipientWallet->id,
-        'sender_id' => $sender->id,
-    ],
-]);
+        Transaction::create([
+            'user_id' => $recipient->id,
+            'reference' => $reference,
+            'type' => 'transfer',
+            'amount' => $amount,
+            'fee' => 0,
+            'total' => $amount,
+            'status' => 'completed',
+            'description' => 'Transfer from '.$sender->first_name.' '.$sender->last_name,
+            'meta' => [
+                'wallet_id' => $recipientWallet->id,
+                'direction' => 'credit',
+                'sender_id' => $sender->id,
+            ],
+        ]);
+
+        $senderWallet->refresh();
+        $recipientWallet->refresh();
+
         return [
-            'reference' => $transfer->reference,
-            'status' => $transfer->status,
-            'amount' => $transfer->amount,
-            'fee' => $transfer->fee,
-            'total' => $transfer->total,
-            'currency' => $transfer->currency,
-            'sender_balance' => $senderWallet->fresh()->balance,
+            'reference' => $reference,
+            'status' => 'completed',
+            'amount' => $amount,
+            'fee' => $fee,
+            'total' => $total,
+            'currency' => $senderWallet->currency,
+            'sender_balance' => $senderWallet->balance,
+            'recipient_balance' => $recipientWallet->balance,
             'recipient' => [
                 'id' => $recipient->id,
-                'name' => $recipient->first_name . ' ' . $recipient->last_name,
+                'name' => trim($recipient->first_name.' '.$recipient->last_name),
                 'wallet_number' => $recipientWallet->wallet_number,
             ],
             'completed_at' => $transfer->completed_at,
         ];
     });
 }
-
     /**
      * History.
      */
