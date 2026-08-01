@@ -9,6 +9,15 @@ class TransferRequest extends FormRequest
     /**
      * Authorize request.
      */
+    public function transfer(TransferRequest $request)
+{
+    return response()->json([
+        'request' => $request->validated(),
+    ]);
+
+    $sender = $request->user();
+   
+}
     public function authorize(): bool
     {
         return auth()->check();
