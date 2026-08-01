@@ -253,13 +253,70 @@ public function send(User $sender, array $data): array
     /**
      * Receipt.
      */
-    public function receipt(string $reference)
-    {
-        return WalletTransfer::with([
-            'sender',
-            'recipient'
-        ])->where('reference', $reference)->firstOrFail();
-    }
+    public function receipt(string $reference): array
+{
+    $transfer = WalletTransfer::with([
+        'sender.wallet',
+        'recipient.wallet',
+    ])->where('reference', $reference)->firstOrFail();
+
+    return [
+
+        'reference' => $transfer->reference,
+
+        'status' => $transfer->status,
+
+        'date' => optional($transfer->completed_at)
+            ->format('d M Y H:i'),
+
+        'description' => $transfer->description,
+
+        'amount' => (double)$transfer->amount,
+
+        'fee' => (double)$transfer->fee,
+
+        'total' => (double)$transfer->total,
+
+        'currency' => $transfer->currency,
+
+        'sender' => [
+
+            'id' => $transfer->sender->id,
+
+            'name' => trim(
+                $transfer->sender->first_name .
+                ' ' .
+                $transfer->sender->last_name
+            ),
+
+            'phone' => $transfer->sender->phone,
+
+            'wallet_number' => optional(
+                $transfer->sender->wallet
+            )->wallet_number,
+
+        ],
+
+        'recipient' => [
+
+            'id' => $transfer->recipient->id,
+
+            'name' => trim(
+                $transfer->recipient->first_name .
+                ' ' .
+                $transfer->recipient->last_name
+            ),
+
+            'phone' => $transfer->recipient->phone,
+
+            'wallet_number' => optional(
+                $transfer->recipient->wallet
+            )->wallet_number,
+
+        ],
+
+    ];
+}
 
     /**
      * Beneficiaries.
