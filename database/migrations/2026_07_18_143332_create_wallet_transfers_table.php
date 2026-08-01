@@ -11,7 +11,8 @@ return new class extends Migration
         Schema::create('wallet_transfers', function (Blueprint $table) {
             $table->id();
 
-            $table->string('reference')->unique();
+            $table->string('reference');
+$table->index('reference');
 
             $table->foreignId('sender_id')
                 ->constrained('users')
