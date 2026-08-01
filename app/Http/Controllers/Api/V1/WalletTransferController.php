@@ -42,6 +42,7 @@ class WalletTransferController extends Controller
         'message' => $e->getMessage(),
         'file' => $e->getFile(),
         'line' => $e->getLine(),
+        'trace' => $e->getTraceAsString(),
     ], 422);
 
 }
@@ -79,31 +80,12 @@ class WalletTransferController extends Controller
      * Send money.
      */
     public function send(WalletTransferRequest $request)
-    {
-        try {
-
-            $transfer = $this->walletTransferService
-                ->send(
-                    $request->user(),
-                    $request->validated()
-                );
-
-            return response()->json([
-                'success'=>true,
-                'message'=>'Transfer completed successfully.',
-                'data'=>$transfer,
-            ]);
-
-        } catch (Throwable $e) {
-
-            return response()->json([
-                'success'=>false,
-                'message'=>$e->getMessage(),
-            ],422);
-
-        }
-    }
-
+{
+    return response()->json([
+        'validated' => $request->validated(),
+        'all' => $request->all(),
+    ]);
+}
     /**
      * Transfer history.
      */
