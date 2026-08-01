@@ -7,6 +7,7 @@ use App\Models\Otp;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class PinController extends Controller
 {
@@ -19,12 +20,12 @@ class PinController extends Controller
             'pin' => ['required', 'digits:4', 'confirmed'],
         ]);
 
-        $user = $request->user();
+        $user = $request->user()->fresh();
 
-        if ($user->transaction_pin) {
+        if (!empty($user->transaction_pin)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Transaction PIN already exists.'
+                'message' => 'Transaction PIN already exists.',
             ], 422);
         }
 
@@ -34,7 +35,7 @@ class PinController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Transaction PIN created successfully.'
+            'message' => 'Transaction PIN created successfully.',
         ]);
     }
 
@@ -47,25 +48,25 @@ class PinController extends Controller
             'pin' => ['required', 'digits:4'],
         ]);
 
-        $user = $request->user();
+        $user = $request->user()->fresh();
 
-        if (!$user->transaction_pin) {
+        if (empty($user->transaction_pin)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Transaction PIN not found.'
+                'message' => 'Transaction PIN has not been created.',
             ], 404);
         }
 
         if (!Hash::check($request->pin, $user->transaction_pin)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid transaction PIN.'
+                'message' => 'Invalid transaction PIN.',
             ], 422);
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Transaction PIN verified.'
+            'message' => 'Transaction PIN verified successfully.',
         ]);
     }
 
@@ -79,19 +80,26 @@ class PinController extends Controller
             'new_pin' => ['required', 'digits:4', 'confirmed'],
         ]);
 
-        $user = $request->user();
+        $user = $request->user()->fresh();
 
-        if (!$user->transaction_pin) {
+        if (empty($user->transaction_pin)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Transaction PIN not found.'
+                'message' => 'Transaction PIN not found.',
             ], 404);
         }
 
         if (!Hash::check($request->current_pin, $user->transaction_pin)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Current PIN is incorrect.'
+                'message' => 'Current PIN is incorrect.',
+            ], 422);
+        }
+
+        if (Hash::check($request->new_pin, $user->transaction_pin)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'New PIN must be different from the current PIN.',
             ], 422);
         }
 
@@ -101,7 +109,7 @@ class PinController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Transaction PIN changed successfully.'
+            'message' => 'Transaction PIN changed successfully.',
         ]);
     }
 
@@ -125,7 +133,7 @@ class PinController extends Controller
         if (!$otp) {
             return response()->json([
                 'success' => false,
-                'message' => 'OTP verification required.'
+                'message' => 'OTP verification required.',
             ], 422);
         }
 
@@ -134,7 +142,7 @@ class PinController extends Controller
         if (!$user) {
             return response()->json([
                 'success' => false,
-                'message' => 'User not found.'
+                'message' => 'User not found.',
             ], 404);
         }
 
@@ -144,7 +152,7 @@ class PinController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Transaction PIN reset successfully.'
+            'message' => 'Transaction PIN reset successfully.',
         ]);
     }
 }
