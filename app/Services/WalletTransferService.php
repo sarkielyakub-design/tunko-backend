@@ -266,8 +266,11 @@ public function send(User $sender, array $data): array
 
         'status' => $transfer->status,
 
-        'date' => optional($transfer->completed_at)
-            ->format('d M Y H:i'),
+       'created_at' => optional($transfer->completed_at)
+    ->toDateTimeString(),
+
+'date' => optional($transfer->completed_at)
+    ->format('d M Y H:i'),
 
         'description' => $transfer->description,
 
@@ -324,7 +327,7 @@ public function send(User $sender, array $data): array
     public function beneficiaries(User $user)
     {
         return WalletTransfer::where('sender_id', $user->id)
-            ->with('recipient')
+            ->with('recipient.wallet')
             ->latest()
             ->take(20)
             ->get()
