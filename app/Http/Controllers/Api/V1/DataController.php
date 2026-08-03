@@ -37,31 +37,29 @@ class DataController extends Controller
     | Countries
     |--------------------------------------------------------------------------
     */
+public function countries()
+{
+    try {
 
-    public function countries()
-    {
-        try {
+        $countries = $this->countries->all();
 
-            return response()->json([
+        return response()->json([
+            'success' => true,
+            'data' => $countries,
+        ]);
 
-                'success' => true,
+    } catch (\Throwable $e) {
 
-                'data' => $this->countries->all(),
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => $e->getFile(),
+            'trace' => $e->getTraceAsString(),
+        ], 500);
 
-            ]);
-
-        } catch (Throwable $e) {
-
-            return response()->json([
-
-                'success' => false,
-
-                'message' => $e->getMessage(),
-
-            ], 500);
-
-        }
     }
+}
 
     /*
     |--------------------------------------------------------------------------
