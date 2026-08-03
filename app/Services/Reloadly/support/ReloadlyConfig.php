@@ -36,6 +36,6 @@ class ReloadlyConfig
 
     public function timeout(): int
     {
-        return config('reloadly.timeout');
+        return (int) config('reloadly.timeout', 30);
     }
 }

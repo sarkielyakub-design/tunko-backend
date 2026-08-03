@@ -132,25 +132,18 @@ class ReloadlyHttpClient
 
         return $response;
     }
-    public function detectOperator(
+   public function detectOperator(
     string $phone,
     string $countryIso
 ): Response {
 
-    return $this->http->retryGet(
-
+    return $this->retryGet(
         '/operators/auto-detect',
-
         [
-
             'phone' => $phone,
-
             'countryCode' => strtoupper($countryIso),
-
         ]
-
     );
-
 }
 /*
 |--------------------------------------------------------------------------
@@ -158,16 +151,11 @@ class ReloadlyHttpClient
 |--------------------------------------------------------------------------
 */
 
-public function quote(
-    array $payload
-): Response
+public function quote(array $payload): Response
 {
-    return $this->http->retryPost(
-
+    return $this->retryPost(
         '/topups/quotes',
-
         $payload
-
     );
 }
 /*
@@ -176,16 +164,12 @@ public function quote(
 |--------------------------------------------------------------------------
 */
 
-public function purchase(
-    array $payload
-): Response
+public function purchase(array $payload): Response
 {
-    return $this->http->retryPost(
-
+    return $this->retryPost(
         '/topups',
-
         $payload
-
     );
 }
+
 }
