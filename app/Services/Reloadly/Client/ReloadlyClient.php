@@ -18,19 +18,26 @@ class ReloadlyHttpClient
      * Base HTTP Client
      */
     protected function client()
-    {
-        return Http::baseUrl(
-                $this->config->topupUrl()
-            )
-            ->timeout(
-                $this->config->timeout()
-            )
-            ->acceptJson()
-            ->withHeaders(
-                $this->auth->headers()
-            );
-    }
+{
+    return Http::baseUrl(
+            $this->config->topupUrl()
+        )
+        ->timeout(
+            $this->config->timeout()
+        )
+        ->withHeaders([
 
+            'Authorization' =>
+                'Bearer '.$this->auth->token(),
+
+            'Accept' =>
+                'application/com.reloadly.topups-v1+json',
+
+            'Content-Type' =>
+                'application/json',
+
+        ]);
+}
     /**
      * GET Request
      */

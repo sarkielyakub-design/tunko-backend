@@ -32,28 +32,26 @@ class ReloadlyAuthService
     /**
      * Request new OAuth token.
      */
-  protected function requestToken(): string
+ protected function requestToken(): string
 {
-    $response = Http::timeout(
-        $this->config->timeout()
-    )->post(
-        $this->config->authUrl() . '/oauth/token',
-        [
-            'client_id' => $this->config->clientId(),
-            'client_secret' => $this->config->clientSecret(),
-            'grant_type' => 'client_credentials',
-           'audience' => $this->config->audience(),
-        ]
-    );
+    $response = Http::asJson()
+        ->timeout($this->config->timeout())
+        ->post(
+            $this->config->authUrl().'/oauth/token',
+            [
+                'client_id' => $this->config->clientId(),
+                'client_secret' => $this->config->clientSecret(),
+                'grant_type' => 'client_credentials',
+                'audience' => $this->config->audience(),
+            ]
+        );
 
     if (!$response->successful()) {
-
         throw new Exception(
             "Reloadly Authentication Failed\n".
             "HTTP Status: ".$response->status()."\n".
             "Response: ".$response->body()
         );
-
     }
 
     return $response->json('access_token');
@@ -61,18 +59,12 @@ class ReloadlyAuthService
     /**
      * Authorization headers.
      */
-    public function headers(): array
-    {
-        return [
-
-            'Authorization' => 'Bearer ' . $this->token(),
-
-            'Accept' => 'application/json',
-
-            'Content-Type' => 'application/json',
-
-        ];
-    }
+   public function headers(): array
+{
+    return [
+        'Authorization' => 'Bearer '.$this->token(),
+    ];
+}
 
     /**
      * Clear cached token.

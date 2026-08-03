@@ -230,7 +230,24 @@ Route::prefix('v1')->group(function () {
         | Transactions
         |--------------------------------------------------------------------------
         */
+Route::get('/reloadly-test', function () {
 
+    $response = Illuminate\Support\Facades\Http::baseUrl(
+        config('reloadly.topup_url')
+    )
+    ->timeout(30)
+    ->withHeaders([
+        'Authorization' => 'Bearer '.app(\App\Services\Reloadly\Auth\ReloadlyAuthService::class)->token(),
+        'Accept' => 'application/com.reloadly.topups-v1+json',
+        'Content-Type' => 'application/json',
+    ])
+    ->get('/countries');
+
+    return response()->json([
+        'status' => $response->status(),
+        'body' => $response->json(),
+    ]);
+});
     Route::prefix('transactions')->group(function () {
 
         Route::get('/', [
