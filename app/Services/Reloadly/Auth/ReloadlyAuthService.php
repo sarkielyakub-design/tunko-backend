@@ -32,41 +32,32 @@ class ReloadlyAuthService
     /**
      * Request new OAuth token.
      */
-    protected function requestToken(): string
-    {
-        $response = Http::timeout(
-            $this->config->timeout()
-        )->post(
-            $this->config->authUrl() . '/oauth/token',
-            [
-                'client_id' => $this->config->clientId(),
-                'client_secret' => $this->config->clientSecret(),
-                'grant_type' => 'client_credentials',
-                'audience' => 'https://topups.reloadly.com',
-            ]
+  protected function requestToken(): string
+{
+    $response = Http::timeout(
+        $this->config->timeout()
+    )->post(
+        $this->config->authUrl() . '/oauth/token',
+        [
+            'client_id' => $this->config->clientId(),
+            'client_secret' => $this->config->clientSecret(),
+            'grant_type' => 'client_credentials',
+           'audience' => $this->config->audience(),
+        ]
+    );
+
+    if (!$response->successful()) {
+
+        throw new Exception(
+            "Reloadly Authentication Failed\n".
+            "HTTP Status: ".$response->status()."\n".
+            "Response: ".$response->body()
         );
 
-        if (!$response->successful()) {
-
-            throw new Exception(
-                'Unable to authenticate with Reloadly.'
-            );
-
-        }
-
-        $token = $response->json('access_token');
-
-        if (!$token) {
-
-            throw new Exception(
-                'Reloadly access token missing.'
-            );
-
-        }
-
-        return $token;
     }
 
+    return $response->json('access_token');
+}
     /**
      * Authorization headers.
      */

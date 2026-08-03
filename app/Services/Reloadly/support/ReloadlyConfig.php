@@ -38,4 +38,8 @@ class ReloadlyConfig
     {
         return (int) config('reloadly.timeout', 30);
     }
+    public function audience(): string
+{
+    return config('reloadly.audience');
+}
 }
