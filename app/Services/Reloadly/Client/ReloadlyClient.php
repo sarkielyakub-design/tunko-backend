@@ -1,13 +1,17 @@
 <?php
 
-namespace App\Services\Reloadly\Http;
 
+namespace App\Services\Reloadly\Client;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use App\Services\Reloadly\Auth\ReloadlyAuthService;
 use App\Services\Reloadly\Support\ReloadlyConfig;
+use App\Services\Reloadly\Client\ReloadlyClient;
 
-class ReloadlyHttpClient
+
+
+class ReloadlyClient
+
 {
     public function __construct(
         protected ReloadlyConfig $config,
@@ -17,39 +21,34 @@ class ReloadlyHttpClient
     /**
      * Base HTTP Client
      */
-    protected function client()
+ protected function client()
 {
-    return Http::baseUrl(
-            $this->config->topupUrl()
-        )
-        ->timeout(
-            $this->config->timeout()
-        )
-        ->withHeaders([
-
-            'Authorization' =>
-                'Bearer '.$this->auth->token(),
-
-            'Accept' =>
-                'application/com.reloadly.topups-v1+json',
-
-            'Content-Type' =>
-                'application/json',
-
+    return Http::baseUrl($this->config->topupUrl())
+        ->timeout(30)
+        ->withToken($this->auth->token())
+        ->replaceHeaders([
+            'Accept' => 'application/com.reloadly.topups-v1+json',
         ]);
 }
     /**
      * GET Request
      */
     public function get(
-        string $endpoint,
-        array $query = []
-    ): Response {
+    string $endpoint,
+    array $query = []
+): Response {
 
-        return $this->client()
-            ->get($endpoint, $query);
+    $response = $this->client()->get($endpoint, $query);
 
-    }
+    logger()->info('Reloadly Request', [
+        'url' => $this->config->topupUrl() . $endpoint,
+        'headers' => $response->transferStats?->getRequest()?->getHeaders(),
+        'status' => $response->status(),
+        'body' => $response->body(),
+    ]);
+
+    return $response;
+}
 
     /**
      * POST Request
@@ -178,6 +177,28 @@ public function purchase(array $payload): Response
         $payload
     );
 }
+/**
+ * Get all supported countries.
+ */
+public function countries(): Response
+{
+    return $this->retryGet('/countries');
+}
 
+/**
+ * Get operators by country.
+ */
+public function operators(string $country): Response
+{
+    return $this->retryGet('/operators/countries/' . strtoupper($country));
+}
+
+/**
+ * Get products by operator.
+ */
+public function products(int $operatorId): Response
+{
+    return $this->retryGet('/operators/' . $operatorId);
+}
 
 }
