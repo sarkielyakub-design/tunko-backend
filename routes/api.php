@@ -1,488 +1,697 @@
 <?php
+
 use Illuminate\Support\Facades\Route;
-use Illuminate\Http\Request;
-use App\Http\Controllers\Api\V1\AuthController;
-use App\Http\Controllers\Api\V1\WalletController;
-use App\Http\Controllers\Api\V1\FundingController;
-use App\Http\Controllers\Api\V1\TransferController;
-use App\Http\Controllers\Api\V1\TransactionController;
-use App\Http\Controllers\Api\V1\BeneficiaryController;
-use App\Http\Controllers\Api\V1\ProfileController;
-use App\Http\Controllers\Api\V1\DashboardController;
-use App\Http\Controllers\Api\V1\KycController;
-use App\Http\Controllers\Api\V1\PinController;
-use App\Http\Controllers\Api\V1\OtpController;
-use App\Http\Controllers\Api\V1\PasswordController;
-use App\Http\Controllers\Api\V1\CardController;
-use App\Http\Controllers\Api\V1\ExchangeRateController;
-use App\Http\Controllers\Api\V1\DataController;
-use App\Http\Controllers\Api\V1\AirtimeController;
-use App\Http\Controllers\Api\V1\WalletDepositController;
-use App\Http\Controllers\Api\V1\WalletTransferController;
-use App\Http\Controllers\Api\V1\CinetPayController;
-require __DIR__.'/api/admin.php';
+
 /*
 |--------------------------------------------------------------------------
-| Test
+| Controllers
 |--------------------------------------------------------------------------
 */
+
+use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\ProfileController;
+use App\Http\Controllers\Api\V1\WalletController;
+use App\Http\Controllers\Api\V1\FundingController;
+use App\Http\Controllers\Api\V1\WalletDepositController;
+use App\Http\Controllers\Api\V1\CinetPayController;
+use App\Http\Controllers\Api\V1\TransactionController;
+use App\Http\Controllers\Api\V1\TransferController;
+use App\Http\Controllers\Api\V1\WalletTransferController;
+use App\Http\Controllers\Api\V1\BeneficiaryController;
+use App\Http\Controllers\Api\V1\DataController;
+use App\Http\Controllers\Api\V1\AirtimeController;
+use App\Http\Controllers\Api\V1\CardController;
+use App\Http\Controllers\Api\V1\ExchangeRateController;
+use App\Http\Controllers\Api\V1\KycController;
+use App\Http\Controllers\Api\V1\OtpController;
+use App\Http\Controllers\Api\V1\PasswordController;
+use App\Http\Controllers\Api\V1\PinController;
+
+require __DIR__.'/api/admin.php';
+
+/*
+|--------------------------------------------------------------------------
+| Test Route
+|--------------------------------------------------------------------------
+*/
+
 Route::get('/test', function () {
+
     return response()->json([
+
         'success' => true,
+
         'message' => 'Tunko API is working',
+
     ]);
+
 });
+
 /*
 |--------------------------------------------------------------------------
 | API V1
 |--------------------------------------------------------------------------
 */
+
 Route::prefix('v1')->group(function () {
+
     /*
     |--------------------------------------------------------------------------
-    | Authentication
+    | Authentication (Public)
     |--------------------------------------------------------------------------
     */
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login']);
+
+    Route::post('/register', [
+        AuthController::class,
+        'register',
+    ]);
+
+    Route::post('/login', [
+        AuthController::class,
+        'login',
+    ]);
+
     Route::post('/password/forgot', [
         PasswordController::class,
-        'forgot'
+        'forgot',
     ]);
+
     Route::post('/password/reset', [
         PasswordController::class,
-        'reset'
+        'reset',
     ]);
-    Route::middleware('auth:sanctum')
-    ->get('/me',[AuthController::class,'me']);
+
     /*
     |--------------------------------------------------------------------------
     | Protected Routes
     |--------------------------------------------------------------------------
     */
+
     Route::middleware('auth:sanctum')->group(function () {
-        Route::prefix('wallet')->group(function () {
 
-    Route::post(
-        '/deposit/initialize',
-        [WalletDepositController::class, 'initialize']
-    );
-
-    Route::post(
-        '/deposit/verify',
-        [WalletDepositController::class, 'verify']
-    );
-Route::post(
-    '/deposit/request',
-    [WalletDepositController::class, 'requestDeposit']
-);
-    Route::middleware('auth:sanctum')
-    ->prefix('wallet/deposit')
-    ->group(function () {
-
-        Route::post(
-            '/initialize',
-            [CinetPayController::class, 'initialize']
-        );
-
-        Route::post(
-            '/verify',
-            [CinetPayController::class, 'verify']
-        );
-
-    });
-
-Route::post(
-    '/webhooks/cinetpay',
-    [CinetPayController::class, 'webhook']
-);
-});
         /*
         |--------------------------------------------------------------------------
         | Authentication
         |--------------------------------------------------------------------------
         */
+
+        Route::get('/me', [
+            AuthController::class,
+            'me',
+        ]);
+
         Route::post('/logout', [
             AuthController::class,
-            'logout'
+            'logout',
         ]);
+
         /*
         |--------------------------------------------------------------------------
         | Dashboard
         |--------------------------------------------------------------------------
         */
+
         Route::get('/dashboard', [
             DashboardController::class,
-            'index'
+            'index',
         ]);
+
         /*
         |--------------------------------------------------------------------------
         | Profile
         |--------------------------------------------------------------------------
         */
+
         Route::get('/profile', [
             ProfileController::class,
-            'show'
+            'show',
         ]);
+
         Route::put('/profile', [
             ProfileController::class,
-            'update'
+            'update',
         ]);
         /*
         |--------------------------------------------------------------------------
         | Wallet
         |--------------------------------------------------------------------------
         */
-        Route::get('/wallet', [
-            WalletController::class,
-            'show'
+
+        Route::prefix('wallet')->group(function () {
+
+            /*
+            |--------------------------------------------------------------------------
+            | Wallet Details
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get('/', [
+                WalletController::class,
+                'show',
+            ]);
+
+            Route::get('/balance', [
+                WalletController::class,
+                'balance',
+            ]);
+
+            Route::get('/summary', [
+                WalletController::class,
+                'summary',
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Wallet Operations
+            |--------------------------------------------------------------------------
+            */
+
+            Route::post('/fund', [
+                FundingController::class,
+                'fund',
+            ]);
+
+            Route::post('/deposit', [
+                WalletController::class,
+                'deposit',
+            ]);
+
+            Route::post('/transfer', [
+                TransferController::class,
+                'transfer',
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Manual Deposit Request
+            |--------------------------------------------------------------------------
+            */
+
+            Route::post('/deposit/request', [
+                WalletDepositController::class,
+                'requestDeposit',
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | CinetPay Deposit
+            |--------------------------------------------------------------------------
+            */
+
+            Route::post('/deposit/initialize', [
+                CinetPayController::class,
+                'initialize',
+            ]);
+
+            Route::post('/deposit/verify', [
+                CinetPayController::class,
+                'verify',
+            ]);
+
+        });
+
+        /*
+        |--------------------------------------------------------------------------
+        | CinetPay Webhook
+        |--------------------------------------------------------------------------
+        |
+        | No auth middleware should protect provider webhooks.
+        |--------------------------------------------------------------------------
+        */
+
+        Route::post('/webhooks/cinetpay', [
+            CinetPayController::class,
+            'webhook',
         ]);
-        Route::get('/wallet/balance', [
-            WalletController::class,
-            'balance'
-        ]);
-        Route::get('/wallet/summary', [
-            WalletController::class,
-            'summary'
-        ]);
-        Route::post('/wallet/fund', [
-            FundingController::class,
-            'fund'
-        ]);
-        Route::post('/wallet/deposit', [
-            WalletController::class,
-            'deposit'
-        ]);
-        Route::post('/wallet/transfer', [
-            TransferController::class,
-            'transfer'
-        ]);
-        
+
         /*
         |--------------------------------------------------------------------------
         | Transactions
         |--------------------------------------------------------------------------
         */
-        Route::get('/transactions', [
-            TransactionController::class,
-            'index'
-        ]);
-        Route::middleware('auth:sanctum')->get(
-    '/receipt/{reference}',
-    [TransactionController::class, 'receipt']
-);/*
-|--------------------------------------------------------------------------
-| Data
-|--------------------------------------------------------------------------
-*/
 
-Route::prefix('data')
-    ->controller(DataController::class)
-    ->group(function () {
+    Route::prefix('transactions')->group(function () {
+
+        Route::get('/', [
+            TransactionController::class,
+            'index',
+        ]);
+
+        Route::get('/receipt/{reference}', [
+            TransactionController::class,
+            'receipt',
+        ]);
+
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Data (Reloadly)
+    |--------------------------------------------------------------------------
+    */
+
+        Route::prefix('data')->group(function () {
+
+            /*
+            |--------------------------------------------------------------------------
+            | Countries
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get('/countries', [
+                DataController::class,
+                'countries',
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Networks / Operators
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get('/networks/{country}', [
+                DataController::class,
+                'networks',
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Bundles / Products
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get('/bundles/{network}', [
+                DataController::class,
+                'bundles',
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Quote
+            |--------------------------------------------------------------------------
+            */
+
+            Route::post('/quote', [
+                DataController::class,
+                'quote',
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Purchase
+            |--------------------------------------------------------------------------
+            */
+
+            Route::post('/purchase', [
+                DataController::class,
+                'purchase',
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Purchase History
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get('/history', [
+                DataController::class,
+                'history',
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Receipt
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get('/receipt/{reference}', [
+                DataController::class,
+                'receipt',
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Beneficiaries
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get('/beneficiaries', [
+                DataController::class,
+                'beneficiaries',
+            ]);
+
+        });
 
         /*
         |--------------------------------------------------------------------------
-        | Countries & Networks
+        | International Transfer
         |--------------------------------------------------------------------------
         */
 
-    Route::get('/countries', [DataController::class, 'countries']);
+        Route::prefix('transfer')->group(function () {
 
-    Route::get('/networks/{country}', [DataController::class, 'networks']);
+            Route::get('/countries', [
+                TransferController::class,
+                'countries',
+            ]);
 
-    Route::get('/bundles/{network}', [DataController::class, 'bundles']);
+            Route::get('/recipients', [
+                TransferController::class,
+                'recipients',
+            ]);
 
-    Route::post('/quote', [DataController::class, 'quote']);
+            Route::post('/search', [
+                TransferController::class,
+                'searchRecipient',
+            ]);
 
-    Route::post('/purchase', [DataController::class, 'purchase']);
+            Route::post('/verify', [
+                TransferController::class,
+                'verify',
+            ]);
 
-    Route::get('/beneficiaries', [DataController::class, 'beneficiaries']);
+            Route::post('/quote', [
+                TransferController::class,
+                'quote',
+            ]);
 
-    Route::get('/history', [DataController::class, 'history']);
+            Route::post('/send', [
+                TransferController::class,
+                'transfer',
+            ]);
 
-    Route::get('/receipt/{reference}', [DataController::class, 'receipt']);
+            Route::get('/history', [
+                TransferController::class,
+                'history',
+            ]);
 
-});
-/*
-|--------------------------------------------------------------------------
-| Transfers
-|--------------------------------------------------------------------------
-*/
+            Route::get('/receipt/{reference}', [
+                TransferController::class,
+                'receipt',
+            ]);
 
-Route::prefix('transfer')->group(function () {
+        });
 
-    // Countries
-    Route::get('/countries', [
-        TransferController::class,
-        'countries'
-    ]);
+        /*
+        |--------------------------------------------------------------------------
+        | Wallet Transfer
+        |--------------------------------------------------------------------------
+        */
 
-    // Saved Recipients
-    Route::get('/recipients', [
-        TransferController::class,
-        'recipients'
-    ]);
+        Route::prefix('wallet-transfer')->group(function () {
 
-    // Search Recipient
-    Route::post('/search', [
-        TransferController::class,
-        'searchRecipient'
-    ]);
+            Route::post('/verify', [
+                WalletTransferController::class,
+                'verify',
+            ]);
 
-    // Verify Recipient
-    Route::post('/verify', [
-        TransferController::class,
-        'verify'
-    ]);
+            Route::post('/quote', [
+                WalletTransferController::class,
+                'quote',
+            ]);
 
-    // Transfer Quote
-    Route::post('/quote', [
-        TransferController::class,
-        'quote'
-    ]);
+            Route::post('/send', [
+                WalletTransferController::class,
+                'send',
+            ]);
 
-    // Send Money
-    Route::post('/send', [
-        TransferController::class,
-        'transfer'
-    ]);
+            Route::get('/history', [
+                WalletTransferController::class,
+                'history',
+            ]);
 
-    // Transfer History
-    Route::get('/history', [
-        TransferController::class,
-        'history'
-    ]);
+            Route::get('/receipt/{reference}', [
+                WalletTransferController::class,
+                'receipt',
+            ]);
 
-    // Receipt
-    Route::get('/receipt/{reference}', [
-        TransferController::class,
-        'receipt'
-    ]);
+            Route::get('/beneficiaries', [
+                WalletTransferController::class,
+                'beneficiaries',
+            ]);
 
-
-    Route::get("/beneficiaries", [BeneficiaryController::class, "index"]);
-
-    Route::post("/beneficiaries", [BeneficiaryController::class, "store"]);
-
-    Route::delete("/beneficiaries/{beneficiary}", [BeneficiaryController::class, "destroy"]);
-});
-
-
-Route::prefix('wallet-transfer')->group(function () {
-
-    Route::post('/verify', [WalletTransferController::class, 'verify']);
-
-    Route::post('/quote', [WalletTransferController::class, 'quote']);
-
-    Route::post('/send', [WalletTransferController::class, 'send']);
-
-    Route::get('/history', [WalletTransferController::class, 'history']);
-
-    Route::get('/receipt/{reference}', [WalletTransferController::class, 'receipt']);
-
-    Route::get('/beneficiaries', [WalletTransferController::class, 'beneficiaries']);
-
-});
+        });
 
         /*
         |--------------------------------------------------------------------------
         | Beneficiaries
         |--------------------------------------------------------------------------
         */
-        Route::get('/beneficiaries', [
-            BeneficiaryController::class,
-            'index'
-        ]);
-        Route::post('/beneficiaries', [
-            BeneficiaryController::class,
-            'store'
-        ]);
-        Route::post('/beneficiaries/verify', [
-            BeneficiaryController::class,
-            'verify'
-        ]);
-        Route::delete('/beneficiaries/{beneficiary}', [
-            BeneficiaryController::class,
-            'destroy'
-        ]);
+
+        Route::prefix('beneficiaries')->group(function () {
+
+            Route::get('/', [
+                BeneficiaryController::class,
+                'index',
+            ]);
+
+            Route::post('/', [
+                BeneficiaryController::class,
+                'store',
+            ]);
+
+            Route::post('/verify', [
+                BeneficiaryController::class,
+                'verify',
+            ]);
+
+            Route::delete('/{beneficiary}', [
+                BeneficiaryController::class,
+                'destroy',
+            ]);
+
+        });
+
         /*
         |--------------------------------------------------------------------------
         | KYC
         |--------------------------------------------------------------------------
         */
-        Route::post('/kyc/submit', [
-            KycController::class,
-            'submit'
-        ]);
-        Route::get('/kyc/status', [
-            KycController::class,
-            'status'
-        ]);
+
+        Route::prefix('kyc')->group(function () {
+
+            Route::post('/submit', [
+                KycController::class,
+                'submit',
+            ]);
+
+            Route::get('/status', [
+                KycController::class,
+                'status',
+            ]);
+
+        });
+
         /*
         |--------------------------------------------------------------------------
         | Transaction PIN
         |--------------------------------------------------------------------------
         */
-        Route::post('/pin/create', [
-            PinController::class,
-            'create'
-        ]);
-        Route::post('/pin/verify', [
-            PinController::class,
-            'verify'
-        ]);
-        Route::post('/pin/change', [
-            PinController::class,
-            'change'
-        ]);
-        Route::post('/pin/reset', [
-            PinController::class,
-            'reset'
-        ]);
+
+        Route::prefix('pin')->group(function () {
+
+            Route::post('/create', [
+                PinController::class,
+                'create',
+            ]);
+
+            Route::post('/verify', [
+                PinController::class,
+                'verify',
+            ]);
+
+            Route::post('/change', [
+                PinController::class,
+                'change',
+            ]);
+
+            Route::post('/reset', [
+                PinController::class,
+                'reset',
+            ]);
+
+        });
+
         /*
         |--------------------------------------------------------------------------
         | OTP
         |--------------------------------------------------------------------------
         */
-       Route::middleware('auth:sanctum')->group(function () {
 
-    Route::post('/otp/send', [
-        OtpController::class,
-        'send',
-    ]);
+        Route::prefix('otp')->group(function () {
 
-    Route::post('/otp/verify', [
-        OtpController::class,
-        'verify',
-    ]);
+            Route::post('/send', [
+                OtpController::class,
+                'send',
+            ]);
 
-});
+            Route::post('/verify', [
+                OtpController::class,
+                'verify',
+            ]);
+
+        });
+
         /*
         |--------------------------------------------------------------------------
         | Password
         |--------------------------------------------------------------------------
         */
-        Route::post('/password/change', [
-            PasswordController::class,
-            'change'
-        ]);
+
+        Route::prefix('password')->group(function () {
+
+            Route::post('/change', [
+                PasswordController::class,
+                'change',
+            ]);
+
+        });
+
         /*
         |--------------------------------------------------------------------------
         | Cards
         |--------------------------------------------------------------------------
         */
-        Route::get('/cards', [
-            CardController::class,
-            'index'
-        ]);
-        Route::post('/cards', [
-            CardController::class,
-            'store'
-        ]);
-        Route::delete('/cards/{id}', [
-            CardController::class,
-            'destroy'
-        ]);
-        Route::post('/cards/default/{id}', [
-            CardController::class,
-            'setDefault'
-        ]);
-        Route::post('/cards/freeze/{id}', [
-            CardController::class,
-            'freeze'
-        ]);/*
+
+        Route::prefix('cards')->group(function () {
+
+            Route::get('/', [
+                CardController::class,
+                'index',
+            ]);
+
+            Route::post('/', [
+                CardController::class,
+                'store',
+            ]);
+
+            Route::delete('/{id}', [
+                CardController::class,
+                'destroy',
+            ]);
+
+            Route::post('/default/{id}', [
+                CardController::class,
+                'setDefault',
+            ]);
+
+            Route::post('/freeze/{id}', [
+                CardController::class,
+                'freeze',
+            ]);
+
+        });
+
+        /*
         |--------------------------------------------------------------------------
         | Airtime
         |--------------------------------------------------------------------------
         */
+
         Route::prefix('airtime')->group(function () {
 
-    /*
-    |--------------------------------------------------------------------------
-    | Countries
-    |--------------------------------------------------------------------------
-    */
+            /*
+            |--------------------------------------------------------------------------
+            | Countries
+            |--------------------------------------------------------------------------
+            */
 
-    Route::get(
-        '/countries',
-        [AirtimeController::class, 'countries']
-    );
+            Route::get('/countries', [
+                AirtimeController::class,
+                'countries',
+            ]);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Networks
-    |--------------------------------------------------------------------------
-    */
+            /*
+            |--------------------------------------------------------------------------
+            | Networks / Operators
+            |--------------------------------------------------------------------------
+            */
 
-    Route::get(
-        '/networks/{country}',
-        [AirtimeController::class, 'networks']
-    );
+            Route::get('/networks/{country}', [
+                AirtimeController::class,
+                'networks',
+            ]);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Quote
-    |--------------------------------------------------------------------------
-    */
+            /*
+            |--------------------------------------------------------------------------
+            | Products / Bundles
+            |--------------------------------------------------------------------------
+            */
 
-    Route::post(
-        '/quote',
-        [AirtimeController::class, 'quote']
-    );
+            Route::get('/products/{network}', [
+                AirtimeController::class,
+                'products',
+            ]);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Purchase
-    |--------------------------------------------------------------------------
-    */
+            /*
+            |--------------------------------------------------------------------------
+            | Quote
+            |--------------------------------------------------------------------------
+            */
 
-    Route::post(
-        '/purchase',
-        [AirtimeController::class, 'purchase']
-    );
+            Route::post('/quote', [
+                AirtimeController::class,
+                'quote',
+            ]);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Beneficiaries
-    |--------------------------------------------------------------------------
-    */
+            /*
+            |--------------------------------------------------------------------------
+            | Purchase
+            |--------------------------------------------------------------------------
+            */
 
-    Route::get(
-        '/beneficiaries',
-        [AirtimeController::class, 'beneficiaries']
-    );
+            Route::post('/purchase', [
+                AirtimeController::class,
+                'purchase',
+            ]);
 
-    /*
-    |--------------------------------------------------------------------------
-    | History
-    |--------------------------------------------------------------------------
-    */
+            /*
+            |--------------------------------------------------------------------------
+            | History
+            |--------------------------------------------------------------------------
+            */
 
-    Route::get(
-        '/history',
-        [AirtimeController::class, 'history']
-    );
+            Route::get('/history', [
+                AirtimeController::class,
+                'history',
+            ]);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Receipt
-    |--------------------------------------------------------------------------
-    */
+            /*
+            |--------------------------------------------------------------------------
+            | Receipt
+            |--------------------------------------------------------------------------
+            */
 
-    Route::get(
-        '/receipt/{reference}',
-        [AirtimeController::class, 'receipt']
-    );
+            Route::get('/receipt/{reference}', [
+                AirtimeController::class,
+                'receipt',
+            ]);
 
-});
+            /*
+            |--------------------------------------------------------------------------
+            | Beneficiaries
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get('/beneficiaries', [
+                AirtimeController::class,
+                'beneficiaries',
+            ]);
+
+        });
+
         /*
         |--------------------------------------------------------------------------
         | Exchange Rates
         |--------------------------------------------------------------------------
         */
+
         Route::get('/rates', [
             ExchangeRateController::class,
-            'index'
+            'index',
         ]);
+
     });
+
 });

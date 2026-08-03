@@ -4,578 +4,483 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Data\DataPurchaseRequest;
-use App\Models\Country;
 use App\Models\DataPurchase;
-use App\Models\Transaction;
-use App\Models\Wallet;
+
+use App\Services\Data\DataPurchaseService;
+
+use App\Services\Reloadly\Countries\ReloadlyCountryService;
+use App\Services\Reloadly\Operators\ReloadlyOperatorService;
+use App\Services\Reloadly\Products\ReloadlyProductService;
+use App\Services\Reloadly\Quotes\ReloadlyQuoteService;
+
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Throwable;
 
 class DataController extends Controller
 {
-    /**
-     * Countries
-     */
+    public function __construct(
+
+        private readonly ReloadlyCountryService $countries,
+
+        private readonly ReloadlyOperatorService $operators,
+
+        private readonly ReloadlyProductService $products,
+
+        private readonly ReloadlyQuoteService $quotes,
+
+        private readonly DataPurchaseService $purchaseService,
+
+    ) {}
+
+    /*
+    |--------------------------------------------------------------------------
+    | Countries
+    |--------------------------------------------------------------------------
+    */
+
     public function countries()
-{
-    return response()->json([
+    {
+        try {
 
-        "success" => true,
+            return response()->json([
 
-        "data" => Country::where(
-            'is_active',
-            true
-        )
-        ->orderBy('name')
-        ->get(),
+                'success' => true,
 
-    ]);
-}
+                'data' => $this->countries->all(),
 
-    /**
-     * Networks
-     */
-    public function networks($country)
-{
-    return response()->json([
+            ]);
 
-        "success" => true,
+        } catch (Throwable $e) {
 
-        "data" => [
+            return response()->json([
 
-            [
+                'success' => false,
 
-                "id" => 1,
+                'message' => $e->getMessage(),
 
-                "name" => "Airtel",
+            ], 500);
 
-                "logo" => "",
-
-            ],
-
-            [
-
-                "id" => 2,
-
-                "name" => "Moov Africa",
-
-                "logo" => "",
-
-            ],
-
-        ]
-
-    ]);
-}
-    /**
-     * Bundles
-     */
-  public function bundles($network)
-{
-    return response()->json([
-
-        "success" => true,
-
-        "data" => [
-
-            [
-
-                "id" => 1,
-
-                "name" => "1 GB",
-
-                "volume" => "1 GB",
-
-                "amount" => 1000,
-
-                "validity" => "1 Day",
-
-            ],
-
-            [
-
-                "id" => 2,
-
-                "name" => "2 GB",
-
-                "volume" => "2 GB",
-
-                "amount" => 2000,
-
-                "validity" => "7 Days",
-
-            ],
-
-            [
-
-                "id" => 3,
-
-                "name" => "5 GB",
-
-                "volume" => "5 GB",
-
-                "amount" => 5000,
-
-                "validity" => "30 Days",
-
-            ],
-
-        ]
-
-    ]);
-}
-
-    /**
-     * Purchase
-     */
-    public function purchase(DataPurchaseRequest $request)
-{
-    $user = $request->user();
-
-    /*
-    |--------------------------------------------------------------------------
-    | Verify Transaction PIN
-    |--------------------------------------------------------------------------
-    */
-
-    if (!$user->transaction_pin) {
-
-        return response()->json([
-            "success" => false,
-            "message" => "Please create your transaction PIN first."
-        ], 422);
-
-    }
-
-    if (!Hash::check(
-        $request->pin,
-        $user->transaction_pin
-    )) {
-
-        return response()->json([
-            "success" => false,
-            "message" => "Invalid transaction PIN."
-        ], 422);
-
+        }
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Wallet
+    | Networks / Operators
     |--------------------------------------------------------------------------
     */
 
-    $wallet = $user->wallet;
+    public function networks(
+        string $country
+    )
+    {
+        try {
 
-    if (!$wallet) {
+            return response()->json([
 
-        return response()->json([
-            "success" => false,
-            "message" => "Wallet not found."
-        ], 404);
+                'success' => true,
 
+                'data' => $this->operators->all(
+                    $country
+                ),
+
+            ]);
+
+        } catch (Throwable $e) {
+
+            return response()->json([
+
+                'success' => false,
+
+                'message' => $e->getMessage(),
+
+            ], 500);
+
+        }
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Demo Bundle (Replace with Provider/API later)
+    | Bundles / Products
     |--------------------------------------------------------------------------
     */
 
-    $bundles = [
+    public function bundles(
+        int $network
+    )
+    {
+        try {
 
-        1 => [
-            "name" => "1 GB",
-            "amount" => 1000,
-            "validity" => "1 Day",
-        ],
+            return response()->json([
 
-        2 => [
-            "name" => "2 GB",
-            "amount" => 2000,
-            "validity" => "7 Days",
-        ],
+                'success' => true,
 
-        3 => [
-            "name" => "5 GB",
-            "amount" => 5000,
-            "validity" => "30 Days",
-        ],
+                'data' => $this->products->all(
+                    $network
+                ),
 
-    ];
+            ]);
 
-    if (!isset($bundles[$request->bundle_id])) {
+        } catch (Throwable $e) {
 
-        return response()->json([
-            "success" => false,
-            "message" => "Invalid bundle selected."
-        ], 422);
+            return response()->json([
 
+                'success' => false,
+
+                'message' => $e->getMessage(),
+
+            ], 500);
+
+        }
     }
+    /*
+    |--------------------------------------------------------------------------
+    | Quote
+    |--------------------------------------------------------------------------
+    */
 
-    $bundle = $bundles[$request->bundle_id];
+    public function quote(Request $request)
+    {
+        $request->validate([
 
-    $amount = $bundle["amount"];
+            'country' => ['required'],
+
+            'operator' => ['required'],
+
+            'product' => ['required'],
+
+            'recipient' => ['required'],
+
+            'amount' => ['required', 'numeric'],
+
+        ]);
+
+        try {
+
+            $quote = $this->quotes->quote([
+
+                'country' => $request->country,
+
+                'operator' => $request->operator,
+
+                'product' => $request->product,
+
+                'recipient' => $request->recipient,
+
+                'amount' => (float) $request->amount,
+
+            ]);
+
+            return response()->json([
+
+                'success' => true,
+
+                'message' => 'Quote generated successfully.',
+
+                'data' => $quote,
+
+            ]);
+
+        } catch (Throwable $e) {
+
+            return response()->json([
+
+                'success' => false,
+
+                'message' => $e->getMessage(),
+
+            ], 422);
+
+        }
+    }
 
     /*
     |--------------------------------------------------------------------------
-    | Check Wallet Balance
+    | Purchase
     |--------------------------------------------------------------------------
     */
 
-    if ($wallet->balance < $amount) {
+    public function purchase(
+        DataPurchaseRequest $request
+    )
+    {
+        try {
 
-        return response()->json([
-            "success" => false,
-            "message" => "Insufficient wallet balance."
-        ], 422);
+            $result = $this->purchaseService->purchase(
 
-    }
+                $request->user(),
 
-    DB::beginTransaction();
+                [
 
-    try {
+                    'country' => $request->country_id,
 
-        /*
-        |--------------------------------------------------------------------------
-        | Debit Wallet
-        |--------------------------------------------------------------------------
-        */
+                    'operator' => $request->network_id,
 
-        $wallet->decrement(
-            "balance",
-            $amount
-        );
+                    'product' => $request->bundle_id,
 
-        /*
-        |--------------------------------------------------------------------------
-        | Reference
-        |--------------------------------------------------------------------------
-        */
+                    'recipient' => $request->phone,
 
-        $reference = "DAT" .
-            strtoupper(
-                Str::random(12)
+                    'amount' => (float) $request->amount,
+
+                    'pin' => $request->pin,
+
+                    'network_name' => $request->network_name,
+
+                    'bundle_name' => $request->bundle_name,
+
+                ]
+
             );
 
-        /*
-        |--------------------------------------------------------------------------
-        | TODO
-        | Call Provider API
-        |--------------------------------------------------------------------------
-        */
+            return response()->json([
 
-        $providerReference = null;
+                'success' => true,
 
-        /*
-        |--------------------------------------------------------------------------
-        | Save Purchase
-        |--------------------------------------------------------------------------
-        */
+                'message' => 'Data bundle purchased successfully.',
 
-        $purchase = DataPurchase::create([
+                'data' => $result,
 
-            "user_id" => $user->id,
+            ]);
 
-            "country_id" => $request->country_id,
+        } catch (Throwable $e) {
 
-            "reference" => $reference,
+            return response()->json([
 
-            "network_id" => $request->network_id,
+                'success' => false,
 
-            "bundle_id" => $request->bundle_id,
+                'message' => $e->getMessage(),
 
-            "phone" => $request->phone,
+            ], 422);
 
-            "network" => "Airtel",
-
-            "bundle" => $bundle["name"],
-
-            "amount" => $amount,
-
-            "currency" => $wallet->currency,
-
-            "provider" => "Mock",
-
-            "provider_reference" => $providerReference,
-
-            "provider_response" => null,
-
-            "status" => "completed",
-
-        ]);
-
-        /*
-        |--------------------------------------------------------------------------
-        | Save Transaction
-        |--------------------------------------------------------------------------
-        */
-
-        Transaction::create([
-
-            "user_id" => $user->id,
-
-            "reference" => $reference,
-
-            "type" => "data",
-
-            "title" => "Data Bundle",
-
-            "description" =>
-                $bundle["name"] .
-                " purchased for " .
-                $request->phone,
-
-            "amount" => $amount,
-
-            "currency" => $wallet->currency,
-
-            "status" => "completed",
-
-        ]);
-
-        DB::commit();
-
-        return response()->json([
-
-            "success" => true,
-
-            "message" => "Data bundle purchased successfully.",
-
-            "data" => [
-
-                "reference" => $purchase->reference,
-
-                "phone" => $purchase->phone,
-
-                "network" => $purchase->network,
-
-                "bundle" => $purchase->bundle,
-
-                "amount" => $purchase->amount,
-
-                "currency" => $purchase->currency,
-
-                "status" => $purchase->status,
-
-                "created_at" => $purchase->created_at,
-
-            ]
-
-        ]);
-
-    } catch (Throwable $e) {
-
-        DB::rollBack();
-
-        return response()->json([
-
-            "success" => false,
-
-            "message" => "Data purchase failed.",
-
-            "error" => config('app.debug')
-                ? $e->getMessage()
-                : null,
-
-        ], 500);
-
+        }
     }
-}
+    /*
+    |--------------------------------------------------------------------------
+    | History
+    |--------------------------------------------------------------------------
+    */
 
-    /**
-     * History
-     */
-    /**
- * Data Purchase History
- */
-public function history(Request $request)
-{
-    $history = DataPurchase::where(
-        'user_id',
-        $request->user()->id
-    )
-    ->latest()
-    ->get()
-    ->map(function ($purchase) {
+    public function history(Request $request)
+    {
+        try {
 
-        return [
+            $history = DataPurchase::where(
+                'user_id',
+                $request->user()->id
+            )
+            ->latest()
+            ->paginate(20);
 
-            "reference" => $purchase->reference,
+            return response()->json([
 
-            "phone" => $purchase->phone,
+                'success' => true,
 
-            "network" => $purchase->network,
+                'message' => 'Purchase history loaded successfully.',
 
-            "bundle" => $purchase->bundle,
+                'data' => $history,
 
-            "amount" => $purchase->amount,
+            ]);
 
-            "currency" => $purchase->currency,
+        } catch (Throwable $e) {
 
-            "status" => $purchase->status,
+            return response()->json([
 
-            "created_at" => $purchase->created_at,
+                'success' => false,
 
-        ];
+                'message' => $e->getMessage(),
 
-    });
+            ], 500);
 
-    return response()->json([
-
-        "success" => true,
-
-        "data" => $history,
-
-    ]);
-}
-    /**
-     * Receipt
-     */
-   /**
- * Receipt
- */
-public function receipt(
-    Request $request,
-    string $reference
-)
-{
-    $purchase = DataPurchase::where(
-        'user_id',
-        $request->user()->id
-    )
-    ->where(
-        'reference',
-        $reference
-    )
-    ->first();
-
-    if (!$purchase) {
-
-        return response()->json([
-
-            "success" => false,
-
-            "message" => "Receipt not found.",
-
-        ],404);
-
+        }
     }
 
-    return response()->json([
+    /*
+    |--------------------------------------------------------------------------
+    | Receipt
+    |--------------------------------------------------------------------------
+    */
 
-        "success" => true,
+    public function receipt(
+        Request $request,
+        string $reference
+    )
+    {
+        try {
 
-        "data" => [
+            $purchase = DataPurchase::with([
+                'user.wallet',
+            ])
 
-            "reference" => $purchase->reference,
+            ->where(
+                'user_id',
+                $request->user()->id
+            )
 
-            "phone" => $purchase->phone,
+            ->where(
+                'reference',
+                $reference
+            )
 
-            "network" => $purchase->network,
+            ->firstOrFail();
 
-            "bundle" => $purchase->bundle,
+            return response()->json([
 
-            "amount" => $purchase->amount,
+                'success' => true,
 
-            "currency" => $purchase->currency,
+                'message' => 'Receipt loaded successfully.',
 
-            "status" => $purchase->status,
+                'data' => [
 
-            "provider" => $purchase->provider,
+                    'reference' =>
+                        $purchase->reference,
 
-            "provider_reference" =>
-                $purchase->provider_reference,
+                    'status' =>
+                        $purchase->status,
 
-            "created_at" =>
-                $purchase->created_at,
+                    'date' =>
+                        optional(
+                            $purchase->created_at
+                        )->format('d M Y H:i'),
 
-        ],
+                    'amount' =>
+                        (double) $purchase->amount,
 
-    ]);
-}
-public function quote(Request $request)
-{
-    $request->validate([
-        'bundle_id' => 'required|integer',
-        'phone' => 'required|string',
-    ]);
+                    'fee' => 0,
 
-    $bundles = [
-        1 => [
-            "name" => "1 GB",
-            "amount" => 1000,
-        ],
-        2 => [
-            "name" => "2 GB",
-            "amount" => 2000,
-        ],
-        3 => [
-            "name" => "5 GB",
-            "amount" => 5000,
-        ],
-    ];
+                    'total' =>
+                        (double) $purchase->amount,
 
-    if (!isset($bundles[$request->bundle_id])) {
-        return response()->json([
-            "success" => false,
-            "message" => "Bundle not found.",
-        ],404);
+                    'currency' =>
+                        $purchase->currency,
+
+                    'description' =>
+                        'Data Bundle Purchase',
+
+                    'network' =>
+                        $purchase->network,
+
+                    'bundle' =>
+                        $purchase->bundle,
+
+                    'provider' =>
+                        $purchase->provider,
+
+                    'provider_reference' =>
+                        $purchase->provider_reference,
+
+                    'recipient' => [
+
+                        'phone' =>
+                            $purchase->phone,
+
+                    ],
+
+                    'sender' => [
+
+                        'id' =>
+                            $purchase->user->id,
+
+                        'name' => trim(
+
+                            $purchase->user->first_name .
+
+                            ' ' .
+
+                            $purchase->user->last_name
+
+                        ),
+
+                        'phone' =>
+                            $purchase->user->phone,
+
+                        'wallet_number' =>
+                            optional(
+                                $purchase->user->wallet
+                            )->wallet_number,
+
+                    ],
+
+                ],
+
+            ]);
+
+        } catch (Throwable $e) {
+
+            return response()->json([
+
+                'success' => false,
+
+                'message' => $e->getMessage(),
+
+            ], 404);
+
+        }
     }
+    /*
+    |--------------------------------------------------------------------------
+    | Beneficiaries
+    |--------------------------------------------------------------------------
+    */
 
-    $bundle = $bundles[$request->bundle_id];
+    public function beneficiaries(Request $request)
+    {
+        try {
 
-    return response()->json([
-        "success" => true,
-        "data" => [
-            "amount" => $bundle["amount"],
-            "fee" => 0,
-            "total" => $bundle["amount"],
-            "currency" => "NGN",
-        ]
-    ]);
-}
-public function beneficiaries(Request $request)
-{
-    $items = DataPurchase::where(
-        'user_id',
-        $request->user()->id
-    )
-    ->select(
-        'phone',
-        'network'
-    )
-    ->distinct()
-    ->latest()
-    ->take(10)
-    ->get()
-    ->map(function ($item, $index) {
+            $beneficiaries = DataPurchase::where(
+                'user_id',
+                $request->user()->id
+            )
 
-        return [
+            ->select(
+                'phone',
+                'network'
+            )
 
-            "id" => $index + 1,
+            ->distinct()
 
-            "name" => $item->phone,
+            ->latest()
 
-            "phone" => $item->phone,
+            ->take(20)
 
-            "network" => $item->network,
+            ->get()
 
-        ];
+            ->values()
 
-    });
+            ->map(function ($item, $index) {
 
-    return response()->json([
+                return [
 
-        "success" => true,
+                    'id' => $index + 1,
 
-        "data" => $items,
+                    'name' => $item->phone,
 
-    ]);
-}
+                    'phone' => $item->phone,
 
-    
+                    'network' => $item->network,
+
+                ];
+
+            });
+
+            return response()->json([
+
+                'success' => true,
+
+                'message' => 'Beneficiaries loaded successfully.',
+
+                'data' => $beneficiaries,
+
+            ]);
+
+        } catch (Throwable $e) {
+
+            return response()->json([
+
+                'success' => false,
+
+                'message' => $e->getMessage(),
+
+            ], 500);
+
+        }
+    }
 }
