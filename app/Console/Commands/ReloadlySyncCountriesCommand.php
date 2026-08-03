@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use App\Services\Reloadly\Sync\CountrySyncService;
+use App\Services\Reloadly\Countries\ReloadlyCountryService;
 
 class ReloadlySyncCountriesCommand extends Command
 {
@@ -18,7 +18,7 @@ class ReloadlySyncCountriesCommand extends Command
     protected $description = 'Synchronize countries from Reloadly';
 
     public function __construct(
-        private readonly CountrySyncService $service
+        private readonly ReloadlyCountryService $service
     ) {
         parent::__construct();
     }

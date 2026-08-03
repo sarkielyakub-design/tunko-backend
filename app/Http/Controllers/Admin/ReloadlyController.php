@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Services\Reloadly\ReloadlyClient;
+use App\Services\Reloadly\Client\ReloadlyClient;
 use Throwable;
 
 class ReloadlyController extends Controller

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Thunes\Transaction;
+namespace App\Services\Thunes\Transactions;
 
 use App\Services\Thunes\Client\ThunesClient;
 
