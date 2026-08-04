@@ -111,33 +111,33 @@ class AirtimeController extends Controller
         | Save Airtime
         |--------------------------------------------------------------------------
         */
+$airtime = Airtime::create([
 
-        $airtime = Airtime::create([
+    "user_id" => $user->id,
 
-            "user_id" => $user->id,
+    "reference" => $reference,
 
-            "reference" => $reference,
+    // Store the ISO country code (NG, BF, GH...)
+    "country_id" => $request->country_code,
 
-            "country_id" => $request->country_id,
+    // Store the readable country name
+    "country" => $request->country,
 
-            "country" => $request->country,
+    "network" => $request->network,
 
-            "network" => $request->network,
+    "phone" => $request->phone,
 
-            "phone" => $request->phone,
+    "amount" => $request->amount,
 
-            "amount" => $request->amount,
+    "currency" => $user->wallet->currency,
 
-            "currency" => $user->wallet->currency,
+    "provider" => "Reloadly",
 
-            "provider" => "Reloadly",
+    "provider_reference" => $provider["provider_reference"],
 
-            "provider_reference" =>
-                $provider["provider_reference"],
+    "status" => "completed",
 
-            "status" => "completed",
-
-        ]);
+]);
 
         /*
         |--------------------------------------------------------------------------
