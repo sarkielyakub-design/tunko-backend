@@ -41,14 +41,17 @@ class ReloadlyPurchaseService
 
         if (! $response->successful()) {
 
-            throw new Exception(
+    logger()->error('Reloadly Purchase Failed', [
+        'status' => $response->status(),
+        'body' => $response->body(),
+        'request' => $data,
+    ]);
 
-                $response->json('message')
-                    ?? 'Purchase failed.'
+    throw new Exception(
+        $response->body()
+    );
 
-            );
-
-        }
+}
 
         $purchase = $response->json();
 
