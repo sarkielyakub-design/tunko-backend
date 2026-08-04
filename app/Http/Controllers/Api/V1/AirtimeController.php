@@ -13,11 +13,13 @@ use Illuminate\Support\Str;
 use App\Models\Country;
 use App\Models\Network;
 use App\Http\Requests\Airtime\PurchaseRequest;
+use App\Services\Reloadly\Countries\ReloadlyCountryService;
+use App\Services\Reloadly\Operators\ReloadlyOperatorService;
 
 
 class AirtimeController extends Controller
 {
-    //
+ 
     public function purchase(PurchaseRequest $request)
 {
     $user = $request->user();
@@ -207,7 +209,9 @@ class AirtimeController extends Controller
     }
 }
 public function __construct(
-    private AirtimeService $airtimeService
+    private AirtimeService $airtimeService,
+    private ReloadlyCountryService $countries,
+    private ReloadlyOperatorService $operators,
 ) {}
 public function history(Request $request)
 {
@@ -248,44 +252,60 @@ public function countries()
 {
     try {
 
-        $countries = Country::where('is_active', true)
-            ->orderBy('name')
-            ->get();
-
         return response()->json([
+
             "success" => true,
-            "data" => $countries,
+
+            "message" => "Countries loaded successfully.",
+
+            "data" => $this->countries->all(),
+
         ]);
 
     } catch (\Throwable $e) {
 
-        Log::error('Countries API Error', [
-            'message' => $e->getMessage(),
-            'file' => $e->getFile(),
-            'line' => $e->getLine(),
-            'trace' => $e->getTraceAsString(),
-        ]);
+        Log::error($e);
 
         return response()->json([
+
             "success" => false,
+
             "message" => $e->getMessage(),
+
         ], 500);
+
     }
 }
 /**
 
 */
-public function networks($country)
+public function networks(string $country)
 {
-    return response()->json([
-        "success" => true,
-        "data" => Network::where('country_id', $country)
-            ->where('airtime_enabled', true)
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get(),
-    ]);
+    try {
+
+        return response()->json([
+
+            "success" => true,
+
+            "message" => "Networks loaded successfully.",
+
+            "data" => $this->operators->airtime($country),
+
+        ]);
+
+    } catch (\Throwable $e) {
+
+        Log::error($e);
+
+        return response()->json([
+
+            "success" => false,
+
+            "message" => $e->getMessage(),
+
+        ], 500);
+
+    }
 }
 public function quote(Request $request)
 {

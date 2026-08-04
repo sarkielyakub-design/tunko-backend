@@ -30,7 +30,81 @@ class ReloadlyOperatorService
             fn () => $this->fetchOperators($countryIso)
         );
     }
+public function airtime(string $countryIso): array
+{
+    $countryIso = strtoupper($countryIso);
 
+    return Cache::remember(
+        "reloadly.airtime.{$countryIso}",
+        now()->addDay(),
+        fn () => $this->fetchAirtimeOperators($countryIso)
+    );
+}
+protected function fetchAirtimeOperators(
+    string $countryIso
+): array {
+
+    $response = $this->client->operators(
+        $countryIso
+    );
+
+    if (! $response->successful()) {
+
+        throw new Exception(
+            $response->json('message')
+            ?? 'Unable to fetch operators.'
+        );
+
+    }
+
+    return collect($response->json())
+
+        ->map(function ($operator) {
+
+            return [
+
+                'id' => (int) ($operator['operatorId'] ?? 0),
+
+                'country_id' =>
+                    $operator['country']['isoName'] ?? '',
+
+                'name' =>
+                    $operator['name'] ?? '',
+
+                'code' =>
+                    $operator['bundle'] ?? '',
+
+                'logo' =>
+                    $operator['logoUrls'][0] ?? '',
+
+                'supports_data' =>
+                    (bool) ($operator['data'] ?? false),
+
+                'supports_pin' =>
+                    (bool) ($operator['pin'] ?? false),
+
+                'supports_local_amount' =>
+                    (bool) ($operator['supportsLocalAmounts'] ?? false),
+
+                'supports_geographical_recharge_plans' =>
+                    (bool) ($operator['supportsGeographicalRechargePlans'] ?? false),
+
+                'fx_rate' =>
+                    (double) ($operator['fx']['rate'] ?? 0),
+
+                'currency' =>
+                    $operator['fx']['currencyCode'] ?? '',
+
+            ];
+
+        })
+
+        ->sortBy('name')
+
+        ->values()
+
+        ->toArray();
+}
     /*
     |--------------------------------------------------------------------------
     | Find Operator

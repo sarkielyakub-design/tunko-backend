@@ -65,43 +65,65 @@ class ReloadlyCountryService
     |--------------------------------------------------------------------------
     */
 
-    protected function fetchCountries(): array
-    {
-        $response = $this->client->countries();
+   protected function fetchCountries(): array
+{
+    $westAfrica = [
+        'BJ', // Benin
+        'BF', // Burkina Faso
+        'CV', // Cape Verde
+        'CI', // Côte d'Ivoire
+        'GM', // Gambia
+        'GH', // Ghana
+        'GN', // Guinea
+        'GW', // Guinea-Bissau
+        'LR', // Liberia
+        'ML', // Mali
+        'MR', // Mauritania
+        'NE', // Niger
+        'NG', // Nigeria
+        'SN', // Senegal
+        'SL', // Sierra Leone
+        'TG', // Togo
+    ];
 
-        if (! $response->successful()) {
+    $countries = [];
 
-            throw new Exception(
-                $response->json('message')
-                ?? 'Unable to fetch Reloadly countries.'
-            );
+    foreach ($westAfrica as $iso) {
+
+        $operators = $this->client
+            ->operators($iso)
+            ->json();
+
+        $supportsData = collect($operators)
+            ->contains(function ($operator) {
+                return ($operator['data'] ?? false) === true;
+            });
+
+        if (! $supportsData) {
+            continue;
         }
 
-        return collect($response->json())
-            ->map(function ($country) {
+        $country = collect(
+            $this->client->countries()->json()
+        )->firstWhere('isoName', $iso);
 
-                return [
+        if (! $country) {
+            continue;
+        }
 
-                    'id' => $country['isoName'] ?? '',
-
-                    'name' => $country['name'] ?? '',
-
-                    'iso_code' => $country['isoName'] ?? '',
-
-                    'calling_code' =>
-                        $country['callingCodes'][0] ?? '',
-
-                    'currency' =>
-                        $country['currencyCode'] ?? '',
-
-                    'flag' =>
-                        $country['flag'] ?? '',
-
-                ];
-
-            })
-            ->sortBy('name')
-            ->values()
-            ->toArray();
+        $countries[] = [
+            'id' => $country['isoName'],
+            'name' => $country['name'],
+            'iso_code' => $country['isoName'],
+            'calling_code' => $country['callingCodes'][0] ?? '',
+            'currency' => $country['currencyCode'],
+            'flag' => $country['flag'],
+        ];
     }
+
+    return collect($countries)
+        ->sortBy('name')
+        ->values()
+        ->toArray();
+}
 }
