@@ -11,16 +11,23 @@ class ReloadlyQuoteService
         protected ReloadlyClient $client
     ) {}
 
-    /**
-     * Generate quote.
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Get Quote
+    |--------------------------------------------------------------------------
+    */
+
     public function quote(array $data): array
     {
         $response = $this->client->quote([
 
-            'operatorId' => $data['operator'],
+            'operatorId' => (int) $data['operator'],
 
-            'productId' => $data['product'],
+            'productId' => (int) $data['product'],
+
+            'countryCode' => strtoupper(
+                $data['country']
+            ),
 
             'recipientPhone' => [
 
@@ -32,7 +39,7 @@ class ReloadlyQuoteService
 
             ],
 
-            'amount' => $data['amount'],
+            'amount' => (float) $data['amount'],
 
         ]);
 
@@ -41,7 +48,7 @@ class ReloadlyQuoteService
             throw new Exception(
 
                 $response->json('message')
-                    ?? 'Unable to generate quote.'
+                    ?? 'Unable to retrieve quote.'
 
             );
 
@@ -51,31 +58,56 @@ class ReloadlyQuoteService
 
         return [
 
-            'provider_quote_id' =>
-                $quote['quoteId'] ?? null,
+            'operator_id' =>
+                $quote['operatorId'] ?? null,
+
+            'product_id' =>
+                $quote['productId'] ?? null,
+
+            'country' =>
+                $quote['countryCode'] ?? null,
 
             'amount' =>
-                $quote['amount'] ?? 0,
-
-            'fee' =>
-                $quote['fee'] ?? 0,
-
-            'discount' =>
-                $quote['discount'] ?? 0,
-
-            'tax' =>
-                $quote['tax'] ?? 0,
-
-            'total' =>
-                $quote['totalAmount']
-                    ?? $quote['amount'],
+                (float) ($quote['amount'] ?? 0),
 
             'currency' =>
                 $quote['currencyCode'] ?? '',
 
-            'expires_at' =>
-                $quote['expiresAt'] ?? null,
+            'fee' =>
+                (float) ($quote['fee'] ?? 0),
+
+            'discount' =>
+                (float) ($quote['discount'] ?? 0),
+
+            'total' =>
+                (float) (
+                    ($quote['amount'] ?? 0)
+                    + ($quote['fee'] ?? 0)
+                    - ($quote['discount'] ?? 0)
+                ),
+
+            'recipient' =>
+                $quote['recipientPhone'] ?? [],
+
+            'raw' => $quote,
 
         ];
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validate Quote
+    |--------------------------------------------------------------------------
+    */
+
+    public function validate(array $quote): bool
+    {
+        return
+
+            isset($quote['amount']) &&
+
+            $quote['amount'] > 0 &&
+
+            ! empty($quote['currency']);
     }
 }

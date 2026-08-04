@@ -11,16 +11,21 @@ class ReloadlyPurchaseService
         protected ReloadlyClient $client
     ) {}
 
-    /**
-     * Purchase Airtime/Data
-     */
-    public function purchase(array $data): array
-    {
-        $response = $this->client->purchase([
+    /*
+    |--------------------------------------------------------------------------
+    | Purchase Airtime / Data
+    |--------------------------------------------------------------------------
+    */
 
-            'operatorId' => $data['operator'],
+    public function purchase(
+        array $data
+    ): array {
 
-            'productId' => $data['product'],
+        $payload = [
+
+            'operatorId' => (int) $data['operator'],
+
+            'productId' => (int) $data['product'],
 
             'recipientPhone' => [
 
@@ -32,28 +37,74 @@ class ReloadlyPurchaseService
 
             ],
 
-            'amount' => $data['amount'],
+            'amount' => (float) $data['amount'],
 
             'customIdentifier' =>
                 $data['reference'] ?? null,
 
-        ]);
+        ];
+
+        $response = $this->client->purchase(
+            $payload
+        );
 
         if (! $response->successful()) {
 
-    logger()->error('Reloadly Purchase Failed', [
-        'status' => $response->status(),
-        'body' => $response->body(),
-        'request' => $data,
-    ]);
+            throw new Exception(
 
-    throw new Exception(
-        $response->body()
-    );
+                $response->json('message')
 
-}
+                ?? 'Reloadly purchase failed.'
 
-        $purchase = $response->json();
+            );
+
+        }
+
+        return $this->transform(
+            $response->json()
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Check Transaction Status
+    |--------------------------------------------------------------------------
+    */
+
+    public function status(
+        string $transactionId
+    ): array {
+
+        $response = $this->client->get(
+            "/topups/{$transactionId}"
+        );
+
+        if (! $response->successful()) {
+
+            throw new Exception(
+
+                $response->json('message')
+
+                ?? 'Unable to retrieve transaction.'
+
+            );
+
+        }
+
+        return $this->transform(
+            $response->json()
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Transform Provider Response
+    |--------------------------------------------------------------------------
+    */
+
+    protected function transform(
+        array $purchase
+    ): array {
 
         return [
 
@@ -61,28 +112,36 @@ class ReloadlyPurchaseService
                 $purchase['transactionId'] ?? null,
 
             'reference' =>
-                $purchase['customIdentifier']
-                    ?? null,
+                $purchase['customIdentifier'] ?? null,
 
             'status' =>
-                $purchase['status']
-                    ?? 'PENDING',
+                strtoupper(
+                    $purchase['status'] ?? 'PENDING'
+                ),
 
             'operator_transaction_id' =>
-                $purchase['operatorTransactionId']
-                    ?? null,
+                $purchase['operatorTransactionId'] ?? null,
 
             'recipient' =>
-                $purchase['recipientPhone']
-                    ?? null,
+                $purchase['recipientPhone'] ?? [],
 
             'amount' =>
-                $purchase['amount']
-                    ?? 0,
+                (float) ($purchase['amount'] ?? 0),
 
             'currency' =>
-                $purchase['currencyCode']
-                    ?? '',
+                $purchase['currencyCode'] ?? '',
+
+            'balance' =>
+                (float) ($purchase['balanceInfo']['oldBalance'] ?? 0),
+
+            'new_balance' =>
+                (float) ($purchase['balanceInfo']['newBalance'] ?? 0),
+
+            'discount' =>
+                (float) ($purchase['discount'] ?? 0),
+
+            'commission' =>
+                (float) ($purchase['commission'] ?? 0),
 
             'raw' => $purchase,
 

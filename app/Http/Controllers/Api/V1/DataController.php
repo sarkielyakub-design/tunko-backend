@@ -41,26 +41,28 @@ public function countries()
 {
     try {
 
-        $countries = $this->countries->all();
-
         return response()->json([
+
             'success' => true,
-            'data' => $countries,
+
+            'message' => 'Countries loaded successfully.',
+
+            'data' => $this->countries->all(),
+
         ]);
 
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
 
         return response()->json([
+
             'success' => false,
-            'error' => $e->getMessage(),
-            'line' => $e->getLine(),
-            'file' => $e->getFile(),
-            'trace' => $e->getTraceAsString(),
-        ], 500);
+
+            'message' => $e->getMessage(),
+
+        ],500);
 
     }
 }
-
     /*
     |--------------------------------------------------------------------------
     | Networks / Operators
