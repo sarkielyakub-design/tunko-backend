@@ -15,9 +15,10 @@ class DataPurchaseRequest extends FormRequest
     {
         return [
 
-            'country_id' => [
+            'country_code' => [
                 'required',
-                'exists:countries,id',
+                'string',
+                'size:2',
             ],
 
             'network_id' => [
@@ -42,6 +43,16 @@ class DataPurchaseRequest extends FormRequest
                 'digits:4',
             ],
 
+            'network_name' => [
+                'nullable',
+                'string',
+            ],
+
+            'bundle_name' => [
+                'nullable',
+                'string',
+            ],
+
         ];
     }
 
@@ -49,11 +60,11 @@ class DataPurchaseRequest extends FormRequest
     {
         return [
 
-            'country_id.required' =>
+            'country_code.required' =>
                 'Country is required.',
 
-            'country_id.exists' =>
-                'Invalid country selected.',
+            'country_code.size' =>
+                'Invalid country code.',
 
             'network_id.required' =>
                 'Network is required.',

@@ -88,6 +88,10 @@ class ReloadlyCountryService
 
     $countries = [];
 
+    $reloadlyCountries = collect(
+        $this->client->countries()->json()
+    );
+
     foreach ($westAfrica as $iso) {
 
         $operators = $this->client
@@ -95,17 +99,14 @@ class ReloadlyCountryService
             ->json();
 
         $supportsData = collect($operators)
-            ->contains(function ($operator) {
-                return ($operator['data'] ?? false) === true;
-            });
+            ->contains(fn ($operator) => ($operator['data'] ?? false) === true);
 
         if (! $supportsData) {
             continue;
         }
 
-        $country = collect(
-            $this->client->countries()->json()
-        )->firstWhere('isoName', $iso);
+        $country = $reloadlyCountries
+            ->firstWhere('isoName', $iso);
 
         if (! $country) {
             continue;
@@ -117,7 +118,11 @@ class ReloadlyCountryService
             'iso_code' => $country['isoName'],
             'calling_code' => $country['callingCodes'][0] ?? '',
             'currency' => $country['currencyCode'],
-            'flag' => $country['flag'],
+
+            // PNG flag instead of SVG
+            'flag' => 'https://flagcdn.com/w80/' .
+                strtolower($country['isoName']) .
+                '.png',
         ];
     }
 
