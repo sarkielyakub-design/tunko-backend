@@ -11,37 +11,36 @@ class ReloadlyPurchaseService
         protected ReloadlyClient $client
     ) {}
 
-    /*
-    |--------------------------------------------------------------------------
-    | Purchase Airtime / Data
-    |--------------------------------------------------------------------------
-    */
-
+    /**
+     * Purchase Airtime / Data
+     */
     public function purchase(
         array $data
     ): array {
 
         $payload = [
 
-            'operatorId' => (int) $data['operator'],
+            'operatorId' =>
+                (int) $data['operator'],
 
-            'productId' => (int) $data['product'],
+            'amount' =>
+                (float) $data['amount'],
+
+            'useLocalAmount' =>
+                $data['use_local_amount'] ?? true,
 
             'recipientPhone' => [
 
-                'countryCode' => strtoupper(
-                    $data['country']
-                ),
+                'countryCode' =>
+                    strtoupper($data['country']),
 
-                'number' => $data['recipient'],
+                'number' =>
+                    $data['recipient'],
 
             ],
 
-            'amount' => (float) $data['amount'],
-
             'customIdentifier' =>
                 $data['reference'] ?? null,
-
         ];
 
         $response = $this->client->purchase(
@@ -57,7 +56,6 @@ class ReloadlyPurchaseService
                 ?? 'Reloadly purchase failed.'
 
             );
-
         }
 
         return $this->transform(
@@ -65,12 +63,9 @@ class ReloadlyPurchaseService
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Check Transaction Status
-    |--------------------------------------------------------------------------
-    */
-
+    /**
+     * Check Transaction Status
+     */
     public function status(
         string $transactionId
     ): array {
@@ -88,7 +83,6 @@ class ReloadlyPurchaseService
                 ?? 'Unable to retrieve transaction.'
 
             );
-
         }
 
         return $this->transform(
@@ -96,12 +90,9 @@ class ReloadlyPurchaseService
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Transform Provider Response
-    |--------------------------------------------------------------------------
-    */
-
+    /**
+     * Transform Provider Response
+     */
     protected function transform(
         array $purchase
     ): array {
@@ -120,31 +111,51 @@ class ReloadlyPurchaseService
                 ),
 
             'operator_transaction_id' =>
-                $purchase['operatorTransactionId'] ?? null,
+                $purchase['operatorTransactionId']
+                ?? null,
 
             'recipient' =>
-                $purchase['recipientPhone'] ?? [],
+                $purchase['recipientPhone']
+                ?? [],
 
             'amount' =>
-                (float) ($purchase['amount'] ?? 0),
+                (float) (
+                    $purchase['requestedAmount']
+                    ?? $purchase['amount']
+                    ?? 0
+                ),
 
             'currency' =>
-                $purchase['currencyCode'] ?? '',
+                $purchase['requestedAmountCurrencyCode']
+                ?? $purchase['currencyCode']
+                ?? '',
 
             'balance' =>
-                (float) ($purchase['balanceInfo']['oldBalance'] ?? 0),
+                (float) (
+                    $purchase['balanceInfo']['oldBalance']
+                    ?? 0
+                ),
 
             'new_balance' =>
-                (float) ($purchase['balanceInfo']['newBalance'] ?? 0),
+                (float) (
+                    $purchase['balanceInfo']['newBalance']
+                    ?? 0
+                ),
 
             'discount' =>
-                (float) ($purchase['discount'] ?? 0),
+                (float) (
+                    $purchase['discount']
+                    ?? 0
+                ),
 
             'commission' =>
-                (float) ($purchase['commission'] ?? 0),
+                (float) (
+                    $purchase['commission']
+                    ?? 0
+                ),
 
-            'raw' => $purchase,
-
+            'raw' =>
+                $purchase,
         ];
     }
 }

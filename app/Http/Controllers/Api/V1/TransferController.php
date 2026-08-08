@@ -324,8 +324,105 @@ return response()->json([
         
 
     }
-    
 public function searchRecipient(Request $request)
+{
+    $request->validate([
+        'query' => [
+            'required',
+            'string',
+            'min:2',
+        ],
+    ]);
+
+    $search = trim($request->input('query'));
+
+    $user = User::with('wallet')
+        ->where(function ($query) use ($search) {
+
+            $query->where('phone', $search)
+                ->orWhere('username', $search)
+                ->orWhere('email', $search)
+                ->orWhereHas('wallet', function ($walletQuery) use ($search) {
+
+                    $walletQuery->where(
+                        'wallet_number',
+                        $search
+                    );
+
+                });
+
+        })
+        ->first();
+
+    if (!$user) {
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Recipient not found.',
+        ], 404);
+
+    }
+
+    if (!$user->wallet) {
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Recipient wallet not found.',
+        ], 404);
+
+    }
+
+    if ($user->id === $request->user()->id) {
+
+        return response()->json([
+            'success' => false,
+            'message' => 'You cannot transfer to yourself.',
+        ], 422);
+
+    }
+
+    return response()->json([
+
+        'success' => true,
+
+        'message' => 'Recipient found.',
+
+        'data' => [
+
+            'id' => $user->id,
+
+            'full_name' =>
+                trim(
+                    $user->first_name . ' ' .
+                    $user->last_name
+                ),
+
+            'username' =>
+                $user->username,
+
+            'email' =>
+                $user->email,
+
+            'phone' =>
+                $user->phone,
+
+            'country' =>
+                $user->country,
+
+            'wallet_number' =>
+                $user->wallet->wallet_number,
+
+            'currency' =>
+                $user->wallet->currency,
+
+            'is_verified' =>
+                (bool) $user->is_verified,
+
+        ],
+
+    ]);
+}
+public function verifyWalletRecipient(Request $request)
 {
     $request->validate([
         'query' => [
@@ -334,89 +431,47 @@ public function searchRecipient(Request $request)
         ],
     ]);
 
-    $search = trim($request->input('query'));
-
-    $user = User::with('wallet')
-        ->where('phone', $search)
-        ->orWhere('username', $search)
-        ->orWhere('email', $search)
-        ->orWhereHas('wallet', function ($q) use ($search) {
-            $q->where('wallet_number', $search);
-        })
-        ->first();
-
-    if (!$user) {
-        return response()->json([
-            "success" => false,
-            "message" => "Recipient not found."
-        ], 404);
-    }
-
-    if (!$user->wallet) {
-        return response()->json([
-            "success" => false,
-            "message" => "Recipient wallet not found."
-        ], 404);
-    }
-
-    if ($user->id === auth()->id()) {
-        return response()->json([
-            "success" => false,
-            "message" => "You cannot transfer to yourself."
-        ], 422);
-    }
-
-    return response()->json([
-        "success" => true,
-        "message" => "Recipient found.",
-        "recipient" => [
-            "id" => $user->id,
-            "full_name" => $user->first_name . " " . $user->last_name,
-            "username" => $user->username,
-            "email" => $user->email,
-            "phone" => $user->phone,
-            "country" => $user->country,
-            "wallet_number" => $user->wallet->wallet_number,
-            "currency" => $user->wallet->currency,
-            "is_verified" => (bool) $user->is_verified,
-        ],
-    ]);
-}
-public function verifyWalletRecipient(Request $request)
-{
-    $request->validate([
-        "query" => [
-            "required",
-            "string",
-        ],
-    ]);
+    $search = trim(
+        $request->input('query')
+    );
 
     $recipient = User::with('wallet')
+        ->where(function ($query) use ($search) {
 
-        ->where('phone', $request->query)
+            $query->where('phone', $search)
 
-        ->orWhere('username', $request->query)
+                ->orWhere(
+                    'username',
+                    $search
+                )
 
-        ->orWhere('email', $request->query)
+                ->orWhere(
+                    'email',
+                    $search
+                )
 
-        ->orWhereHas('wallet', function ($query) use ($request) {
+                ->orWhereHas(
+                    'wallet',
+                    function ($walletQuery) use ($search) {
 
-            $query->where(
-                'wallet_number',
-                $request->query
-            );
+                        $walletQuery->where(
+                            'wallet_number',
+                            $search
+                        );
+
+                    }
+                );
 
         })
-
         ->first();
 
     if (!$recipient) {
 
         return response()->json([
 
-            "success" => false,
+            'success' => false,
 
-            "message" => "Recipient not found."
+            'message' => 'Recipient not found.',
 
         ], 404);
 
@@ -426,21 +481,25 @@ public function verifyWalletRecipient(Request $request)
 
         return response()->json([
 
-            "success" => false,
+            'success' => false,
 
-            "message" => "Recipient wallet not found."
+            'message' => 'Recipient wallet not found.',
 
         ], 404);
 
     }
 
-    if ($recipient->id === auth()->id()) {
+    if (
+        $recipient->id ===
+        $request->user()->id
+    ) {
 
         return response()->json([
 
-            "success" => false,
+            'success' => false,
 
-            "message" => "You cannot transfer to yourself."
+            'message' =>
+                'You cannot transfer to yourself.',
 
         ], 422);
 
@@ -448,31 +507,41 @@ public function verifyWalletRecipient(Request $request)
 
     return response()->json([
 
-        "success" => true,
+        'success' => true,
 
-        "message" => "Recipient verified successfully.",
+        'message' =>
+            'Recipient verified successfully.',
 
-        "data" => [
+        'data' => [
 
-            "id" => $recipient->id,
+            'id' =>
+                $recipient->id,
 
-            "full_name" => $recipient->full_name,
+            'full_name' =>
+                $recipient->full_name,
 
-            "username" => $recipient->username,
+            'username' =>
+                $recipient->username,
 
-            "email" => $recipient->email,
+            'email' =>
+                $recipient->email,
 
-            "phone" => $recipient->phone,
+            'phone' =>
+                $recipient->phone,
 
-            "wallet_number" => $recipient->wallet->wallet_number,
+            'wallet_number' =>
+                $recipient->wallet->wallet_number,
 
-            "country" => $recipient->country,
+            'country' =>
+                $recipient->country,
 
-            "currency" => $recipient->wallet->currency,
+            'currency' =>
+                $recipient->wallet->currency,
 
-            "is_verified" => (bool) $recipient->is_verified,
+            'is_verified' =>
+                (bool) $recipient->is_verified,
 
-        ]
+        ],
 
     ]);
 }

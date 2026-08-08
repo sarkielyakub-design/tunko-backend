@@ -198,61 +198,53 @@ public function countries()
     | Purchase
     |--------------------------------------------------------------------------
     */
+public function purchase(
+    DataPurchaseRequest $request
+) {
+    try {
 
-    public function purchase(
-        DataPurchaseRequest $request
-    )
-    {
-        try {
+        $result = $this->purchaseService->purchase(
+            $request->user(),
+            [
+                'country' => $request->country_code,
 
-            $result = $this->purchaseService->purchase(
+                'operator' => $request->network_id,
 
-                $request->user(),
+                'product' => $request->bundle_id,
 
-                [
+                'recipient' => $request->phone,
 
-                    'country' => $request->country_id,
+                'pin' => $request->pin,
 
-                    'operator' => $request->network_id,
+                'network_name' => $request->network_name,
 
-                    'product' => $request->bundle_id,
+                'bundle_name' => $request->bundle_name,
+            ]
+        );
 
-                    'recipient' => $request->phone,
+        return response()->json([
 
-                    'amount' => (float) $request->amount,
+            'success' => true,
 
-                    'pin' => $request->pin,
+            'message' =>
+                'Data bundle purchased successfully.',
 
-                    'network_name' => $request->network_name,
+            'data' => $result,
 
-                    'bundle_name' => $request->bundle_name,
+        ]);
 
-                ]
+    } catch (Throwable $e) {
 
-            );
+        return response()->json([
 
-            return response()->json([
+            'success' => false,
 
-                'success' => true,
+            'message' => $e->getMessage(),
 
-                'message' => 'Data bundle purchased successfully.',
+        ], 422);
 
-                'data' => $result,
-
-            ]);
-
-        } catch (Throwable $e) {
-
-            return response()->json([
-
-                'success' => false,
-
-                'message' => $e->getMessage(),
-
-            ], 422);
-
-        }
     }
+}
     /*
     |--------------------------------------------------------------------------
     | History

@@ -112,16 +112,13 @@ class AirtimeController extends Controller
         |--------------------------------------------------------------------------
         */
 $airtime = Airtime::create([
-
     "user_id" => $user->id,
 
     "reference" => $reference,
 
-    // Store the ISO country code (NG, BF, GH...)
-    "country_id" => $request->country_code,
+    "country_id" => $country->id,
 
-    // Store the readable country name
-    "country" => $request->country,
+    "country" => $country->name,
 
     "network" => $request->network,
 
@@ -133,12 +130,11 @@ $airtime = Airtime::create([
 
     "provider" => "Reloadly",
 
-    "provider_reference" => $provider["provider_reference"],
+    "provider_reference" =>
+        $provider["provider_reference"],
 
     "status" => "completed",
-
 ]);
-
         /*
         |--------------------------------------------------------------------------
         | Transaction
