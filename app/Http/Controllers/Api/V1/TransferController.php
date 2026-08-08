@@ -20,7 +20,7 @@ use Illuminate\Http\Request;
 class TransferController extends Controller
 {
  
-   public function transfer(TransferRequest $request)
+ public function transfer(TransferRequest $request)
 {
     $sender = $request->user();
 
@@ -30,13 +30,22 @@ class TransferController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    if (!Hash::check($request->pin, $sender->transaction_pin)) {
+    if (
+        empty($sender->transaction_pin) ||
+        !Hash::check(
+            $request->pin,
+            $sender->transaction_pin
+        )
+    ) {
 
         return response()->json([
-            "success" => false,
-            "message" => "Invalid transaction PIN."
-        ], 422);
 
+            "success" => false,
+
+            "message" =>
+                "Invalid transaction PIN."
+
+        ], 422);
     }
 
     /*
@@ -45,41 +54,128 @@ class TransferController extends Controller
     |--------------------------------------------------------------------------
     */
 
+    $sender->load('wallet');
+
     if (!$sender->wallet) {
 
         return response()->json([
-            "success" => false,
-            "message" => "Wallet not found."
-        ], 404);
 
+            "success" => false,
+
+            "message" =>
+                "Wallet not found."
+
+        ], 404);
+    }
+
+    if (!$sender->wallet->is_active) {
+
+        return response()->json([
+
+            "success" => false,
+
+            "message" =>
+                "Wallet is inactive."
+
+        ], 422);
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Verify Recipient
+    | Find Recipient
     |--------------------------------------------------------------------------
+    |
+    | The Flutter app sends:
+    |
+    | recipient = wallet number / phone / username / email
+    |
     */
 
-    $recipient = User::with('wallet')->find(
-        $request->recipient_id
+    $search = trim(
+        $request->recipient
     );
+
+    $recipient = User::with('wallet')
+        ->where(function ($query) use ($search) {
+
+            $query
+
+                ->where(
+                    'phone',
+                    $search
+                )
+
+                ->orWhere(
+                    'username',
+                    $search
+                )
+
+                ->orWhere(
+                    'email',
+                    $search
+                )
+
+                ->orWhereHas(
+                    'wallet',
+                    function ($walletQuery) use ($search) {
+
+                        $walletQuery->where(
+                            'wallet_number',
+                            $search
+                        );
+
+                    }
+                );
+
+        })
+        ->first();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Recipient Not Found
+    |--------------------------------------------------------------------------
+    */
 
     if (!$recipient) {
 
         return response()->json([
-            "success" => false,
-            "message" => "Recipient not found."
-        ], 404);
 
+            "success" => false,
+
+            "message" =>
+                "Recipient not found."
+
+        ], 422);
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Recipient Wallet
+    |--------------------------------------------------------------------------
+    */
 
     if (!$recipient->wallet) {
 
         return response()->json([
-            "success" => false,
-            "message" => "Recipient wallet unavailable."
-        ], 404);
 
+            "success" => false,
+
+            "message" =>
+                "Recipient wallet unavailable."
+
+        ], 422);
+    }
+
+    if (!$recipient->wallet->is_active) {
+
+        return response()->json([
+
+            "success" => false,
+
+            "message" =>
+                "Recipient wallet is inactive."
+
+        ], 422);
     }
 
     /*
@@ -88,242 +184,513 @@ class TransferController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    if ($sender->id === $recipient->id) {
+    if (
+        $sender->id ===
+        $recipient->id
+    ) {
 
         return response()->json([
-            "success" => false,
-            "message" => "You cannot transfer to yourself."
-        ], 422);
 
+            "success" => false,
+
+            "message" =>
+                "You cannot transfer to yourself."
+
+        ], 422);
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Calculate Fee
+    | Calculate Transfer Fee
     |--------------------------------------------------------------------------
     */
 
-    $fee = $request->amount <= 10000
-        ? 10
-        : ($request->amount <= 50000
-            ? 25
-            : 50);
+    $amount =
+        (float) $request->amount;
 
-    $total = $request->amount + $fee;
+    if ($amount <= 10000) {
+
+        $fee = 10;
+
+    } elseif ($amount <= 50000) {
+
+        $fee = 25;
+
+    } elseif ($amount <= 100000) {
+
+        $fee = 50;
+
+    } else {
+
+        $fee = round(
+            $amount * 0.005,
+            2
+        );
+    }
+
+    $total =
+        $amount + $fee;
 
     /*
     |--------------------------------------------------------------------------
-    | Check Wallet Balance
+    | Check Sender Balance
     |--------------------------------------------------------------------------
     */
 
-    if ($sender->wallet->balance < $total) {
+    if (
+        (float) $sender->wallet->balance
+        < $total
+    ) {
 
         return response()->json([
-            "success" => false,
-            "message" => "Insufficient wallet balance."
-        ], 422);
 
+            "success" => false,
+
+            "message" =>
+                "Insufficient wallet balance."
+
+        ], 422);
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Begin Database Transaction
+    |--------------------------------------------------------------------------
+    */
 
     DB::beginTransaction();
 
     try {
 
-        $reference = "TNK" . strtoupper(Str::random(12));
-
         /*
         |--------------------------------------------------------------------------
-        | Debit Sender Wallet
+        | Lock Sender Wallet
         |--------------------------------------------------------------------------
         */
 
-        $sender->wallet->decrement(
-            'balance',
-            $total
-        );
+        $senderWallet =
+            $sender->wallet
+                ->newQuery()
+                ->lockForUpdate()
+                ->find(
+                    $sender->wallet->id
+                );
 
-        /*
-        |--------------------------------------------------------------------------
-        | Credit Recipient Wallet
-        |--------------------------------------------------------------------------
-        */
+        if (!$senderWallet) {
 
-        $recipient->wallet->increment(
-            'balance',
-            $request->amount
-        );
-/*
-|--------------------------------------------------------------------------
-| Save Transfer
-|--------------------------------------------------------------------------
-*/
-
-$transfer = Transfer::create([
-
-    "user_id" => $sender->id,
-
-    "recipient_id" => $recipient->id,
-
-    "reference" => $reference,
-
-    "destination_country" => $recipient->country ?? "Nigeria",
-
-    "destination_currency" => $recipient->wallet->currency,
-
-    "send_amount" => $request->amount,
-
-    "receive_amount" => $request->amount,
-
-    "exchange_rate" => 1,
-
-    "fee" => $fee,
-
-    "total" => $total,
-
-    "status" => "completed",
-
-    "remark" => $request->remark,
-
-]);
-
-/*
-|--------------------------------------------------------------------------
-| Sender Transaction
-|--------------------------------------------------------------------------
-*/
-
-Transaction::create([
-    'user_id' => $sender->id,
-    'reference' => $reference,
-    'type' => 'transfer',
-    'amount' => $request->amount,
-    'fee' => $fee,
-    'total' => $total,
-    'status' => 'completed',
-    'description' => 'Transfer to '.$recipient->full_name,
-    'meta' => [
-        'direction' => 'debit',
-        'currency' => $sender->wallet->currency,
-        'recipient_id' => $recipient->id,
-        'recipient_name' => $recipient->full_name,
-    ],
-]);
-
-/*
-|--------------------------------------------------------------------------
-| Recipient Transaction
-|--------------------------------------------------------------------------
-*/
-
-Transaction::create([
-    'user_id' => $recipient->id,
-    'reference' => $reference,
-    'type' => 'transfer',
-    'amount' => $request->amount,
-    'fee' => 0,
-    'total' => $request->amount,
-    'status' => 'completed',
-    'description' => 'Received from '.$sender->full_name,
-    'meta' => [
-        'direction' => 'credit',
-        'currency' => $recipient->wallet->currency,
-        'sender_id' => $sender->id,
-        'sender_name' => $sender->full_name,
-    ],
-]);
-/*
-|--------------------------------------------------------------------------
-| Save Recipient
-|--------------------------------------------------------------------------
-*/
-
-Recipient::firstOrCreate(
-
-    [
-
-        "user_id" => $sender->id,
-
-        "wallet_number" => $recipient->wallet->wallet_number,
-
-    ],
-
-    [
-
-        "name" => $recipient->full_name,
-
-        "phone" => $recipient->phone,
-
-        "country" => $recipient->country,
-
-        "currency" => $recipient->wallet->currency,
-
-    ]
-
-);
-
-DB::commit();
-
-return response()->json([
-
-    "success" => true,
-
-    "message" => "Transfer completed successfully.",
-
-    "data" => [
-
-        "reference" => $reference,
-
-        "recipient" => [
-
-            "id" => $recipient->id,
-
-            "name" => $recipient->full_name,
-
-            "phone" => $recipient->phone,
-
-            "wallet_number" => $recipient->wallet->wallet_number,
-
-        ],
-
-        "amount" => $request->amount,
-
-        "fee" => $fee,
-
-        "total" => $total,
-
-        "currency" => $sender->wallet->currency,
-
-        "status" => "completed",
-
-        "wallet_balance" => $sender
-            ->wallet
-            ->fresh()
-            ->balance,
-
-        "created_at" => $transfer->created_at,
-
-    ],
-
-]);
-        } catch (Throwable $e) {
-
-            DB::rollBack();
-
-            return response()->json([
-
-                "success"=>false,
-
-                "message"=>"Transfer failed.",
-
-                "error"=>$e->getMessage()
-
-            ],500);
-
+            throw new \Exception(
+                "Sender wallet not found."
+            );
         }
-        
 
+        /*
+        |--------------------------------------------------------------------------
+        | Lock Recipient Wallet
+        |--------------------------------------------------------------------------
+        */
+
+        $recipientWallet =
+            $recipient->wallet
+                ->newQuery()
+                ->lockForUpdate()
+                ->find(
+                    $recipient->wallet->id
+                );
+
+        if (!$recipientWallet) {
+
+            throw new \Exception(
+                "Recipient wallet not found."
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Check Balance Again
+        |--------------------------------------------------------------------------
+        |
+        | Important because another transaction could have
+        | changed the balance after the first check.
+        |
+        */
+
+        if (
+            (float) $senderWallet->balance
+            < $total
+        ) {
+
+            throw new \Exception(
+                "Insufficient wallet balance."
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Generate Reference
+        |--------------------------------------------------------------------------
+        */
+
+        $reference =
+            "TNK" .
+            strtoupper(
+                Str::random(12)
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Debit Sender
+        |--------------------------------------------------------------------------
+        */
+
+        $senderWallet->balance =
+            (float) $senderWallet->balance
+            - $total;
+
+        $senderWallet->save();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Credit Recipient
+        |--------------------------------------------------------------------------
+        */
+
+        $recipientWallet->balance =
+            (float) $recipientWallet->balance
+            + $amount;
+
+        $recipientWallet->save();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Save Transfer
+        |--------------------------------------------------------------------------
+        */
+
+        $transfer = Transfer::create([
+
+            "user_id" =>
+                $sender->id,
+
+            "recipient_id" =>
+                $recipient->id,
+
+            "reference" =>
+                $reference,
+
+            "destination_country" =>
+                $recipient->country,
+
+            "destination_currency" =>
+                $recipientWallet->currency,
+
+            "send_amount" =>
+                $amount,
+
+            "receive_amount" =>
+                $amount,
+
+            "exchange_rate" =>
+                1,
+
+            "fee" =>
+                $fee,
+
+            "total" =>
+                $total,
+
+            "status" =>
+                "completed",
+
+            "remark" =>
+                $request->description,
+
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Sender Transaction
+        |--------------------------------------------------------------------------
+        */
+
+        Transaction::create([
+
+            "user_id" =>
+                $sender->id,
+
+            "reference" =>
+                $reference,
+
+            "type" =>
+                "transfer",
+
+            "title" =>
+                "Money Transfer",
+
+            "amount" =>
+                $amount,
+
+            "fee" =>
+                $fee,
+
+            "total" =>
+                $total,
+
+            "currency" =>
+                $senderWallet->currency,
+
+            "status" =>
+                "completed",
+
+            "description" =>
+                "Transfer to " .
+                $recipient->full_name,
+
+            "meta" => [
+
+                "direction" =>
+                    "debit",
+
+                "recipient_id" =>
+                    $recipient->id,
+
+                "recipient_name" =>
+                    $recipient->full_name,
+
+                "recipient_phone" =>
+                    $recipient->phone,
+
+                "recipient_wallet" =>
+                    $recipientWallet->wallet_number,
+
+                "currency" =>
+                    $senderWallet->currency,
+
+            ],
+
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Recipient Transaction
+        |--------------------------------------------------------------------------
+        */
+
+        Transaction::create([
+
+            "user_id" =>
+                $recipient->id,
+
+            "reference" =>
+                $reference,
+
+            "type" =>
+                "transfer",
+
+            "title" =>
+                "Money Received",
+
+            "amount" =>
+                $amount,
+
+            "fee" =>
+                0,
+
+            "total" =>
+                $amount,
+
+            "currency" =>
+                $recipientWallet->currency,
+
+            "status" =>
+                "completed",
+
+            "description" =>
+                "Received from " .
+                $sender->full_name,
+
+            "meta" => [
+
+                "direction" =>
+                    "credit",
+
+                "sender_id" =>
+                    $sender->id,
+
+                "sender_name" =>
+                    $sender->full_name,
+
+                "sender_phone" =>
+                    $sender->phone,
+
+                "sender_wallet" =>
+                    $senderWallet->wallet_number,
+
+                "currency" =>
+                    $recipientWallet->currency,
+
+            ],
+
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Save Recipient
+        |--------------------------------------------------------------------------
+        |
+        | This makes the recipient appear in the user's
+        | saved/recent recipients next time.
+        |
+        */
+
+        Recipient::firstOrCreate(
+
+            [
+
+                "user_id" =>
+                    $sender->id,
+
+                "wallet_number" =>
+                    $recipientWallet->wallet_number,
+
+            ],
+
+            [
+
+                "name" =>
+                    $recipient->full_name,
+
+                "phone" =>
+                    $recipient->phone,
+
+                "country" =>
+                    $recipient->country,
+
+                "currency" =>
+                    $recipientWallet->currency,
+
+            ]
+
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Commit
+        |--------------------------------------------------------------------------
+        */
+
+        DB::commit();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Refresh Balances
+        |--------------------------------------------------------------------------
+        */
+
+        $senderWallet->refresh();
+
+        $recipientWallet->refresh();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Success Response
+        |--------------------------------------------------------------------------
+        */
+
+        return response()->json([
+
+            "success" =>
+                true,
+
+            "message" =>
+                "Transfer completed successfully.",
+
+            "data" => [
+
+                "reference" =>
+                    $reference,
+
+                "transaction_id" =>
+                    $transfer->id,
+
+                "recipient" => [
+
+                    "id" =>
+                        $recipient->id,
+
+                    "name" =>
+                        $recipient->full_name,
+
+                    "phone" =>
+                        $recipient->phone,
+
+                    "wallet_number" =>
+                        $recipientWallet->wallet_number,
+
+                    "country" =>
+                        $recipient->country,
+
+                    "currency" =>
+                        $recipientWallet->currency,
+
+                ],
+
+                "amount" =>
+                    $amount,
+
+                "send_amount" =>
+                    $amount,
+
+                "receive_amount" =>
+                    $amount,
+
+                "fee" =>
+                    $fee,
+
+                "total" =>
+                    $total,
+
+                "exchange_rate" =>
+                    1,
+
+                "currency" =>
+                    $senderWallet->currency,
+
+                "status" =>
+                    "completed",
+
+                "remark" =>
+                    $request->description,
+
+                "wallet_balance" =>
+                    (float) $senderWallet->balance,
+
+                "created_at" =>
+                    $transfer->created_at,
+
+            ],
+
+        ]);
+
+    } catch (Throwable $e) {
+
+        DB::rollBack();
+
+        report($e);
+
+        return response()->json([
+
+            "success" =>
+                false,
+
+            "message" =>
+                "Transfer failed.",
+
+            "error" =>
+                $e->getMessage(),
+
+        ], 500);
     }
+}
 public function searchRecipient(Request $request)
 {
     $request->validate([

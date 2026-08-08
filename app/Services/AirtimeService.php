@@ -12,7 +12,7 @@ class AirtimeService
     ) {}
 
     /**
-     * Purchase airtime through Reloadly.
+     * Purchase Airtime through Reloadly.
      */
     public function purchase(array $data): array
     {
@@ -22,117 +22,140 @@ class AirtimeService
         |--------------------------------------------------------------------------
         */
 
-        if (empty($data['operator_id'])) {
-            throw new Exception(
-                'Operator ID is required.'
-            );
-        }
+        $countryCode = strtoupper(
+            trim($data['country_code'] ?? '')
+        );
 
-        if (empty($data['country_code'])) {
+        $operatorId = (int) (
+            $data['operator_id'] ?? 0
+        );
+
+        $phone = trim(
+            $data['phone'] ?? ''
+        );
+
+        $amount = (float) (
+            $data['amount'] ?? 0
+        );
+
+        $reference = $data['reference'] ?? null;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Basic Validation
+        |--------------------------------------------------------------------------
+        */
+
+        if (empty($countryCode)) {
             throw new Exception(
                 'Country code is required.'
             );
         }
 
-        if (empty($data['phone'])) {
+        if ($operatorId <= 0) {
+            throw new Exception(
+                'Invalid operator ID.'
+            );
+        }
+
+        if (empty($phone)) {
             throw new Exception(
                 'Recipient phone number is required.'
             );
         }
 
-        if (
-            !isset($data['amount']) ||
-            (float) $data['amount'] <= 0
-        ) {
+        if ($amount <= 0) {
             throw new Exception(
-                'A valid airtime amount is required.'
+                'Invalid airtime amount.'
             );
         }
 
         /*
         |--------------------------------------------------------------------------
-        | Generate Provider Purchase Payload
+        | Normalize Nigerian Phone
         |--------------------------------------------------------------------------
+        |
+        | Example:
+        |
+        | 08066961807
+        |
+        | becomes:
+        |
+        | 8066961807
+        |
         */
 
-        $reference =
-            $data['reference']
-            ?? ('AIR' . strtoupper(
-                substr(
-                    str_replace(
-                        '-',
-                        '',
-                        (string) \Illuminate\Support\Str::uuid()
-                    ),
-                    0,
-                    12
+        if ($countryCode === 'NG') {
+
+            $phone = preg_replace(
+                '/\D/',
+                '',
+                $phone
+            );
+
+            if (
+                str_starts_with(
+                    $phone,
+                    '0'
                 )
-            ));
+            ) {
+                $phone = substr(
+                    $phone,
+                    1
+                );
+            }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Call Reloadly
-        |--------------------------------------------------------------------------
-        */
+            if (
+                str_starts_with(
+                    $phone,
+                    '234'
+                )
+            ) {
+                $phone = substr(
+                    $phone,
+                    3
+                );
+            }
 
-        try {
-
-            $provider = $this->reloadly->purchase([
-
-                'reference' =>
-                    $reference,
-
-                'country' =>
-                    strtoupper(
-                        $data['country_code']
-                    ),
-
-                'operator' =>
-                    (int) $data['operator_id'],
-
-                /*
-                | Airtime does not use a data product ID.
-                | Reloadly uses the operator and amount.
-                */
-                'product' =>
-                    $data['product_id']
-                    ?? 0,
-
-                'recipient' =>
-                    $data['phone'],
-
-                'amount' =>
-                    (float) $data['amount'],
-
-            ]);
-
-        } catch (\Throwable $e) {
-
-            throw new Exception(
-                $e->getMessage()
-            );
+            if (
+                strlen($phone) !== 10
+            ) {
+                throw new Exception(
+                    'Recipient phone number is not valid for Nigeria.'
+                );
+            }
         }
 
         /*
         |--------------------------------------------------------------------------
-        | Verify Provider Response
+        | Reloadly Purchase
         |--------------------------------------------------------------------------
         */
 
-        if (
-            empty(
-                $provider['transaction_id']
-            )
-        ) {
+        $provider = $this->reloadly->purchase([
 
-            throw new Exception(
-                'Reloadly did not return a transaction reference.'
-            );
-        }
+            'reference' => $reference,
+
+            'country' => $countryCode,
+
+            'operator' => $operatorId,
+
+            /*
+            | Airtime does not use a data bundle/product.
+            | Reloadly's topup endpoint uses operatorId
+            | and amount for airtime.
+            */
+            'product' => 0,
+
+            'recipient' => $phone,
+
+            'amount' => $amount,
+
+        ]);
 
         /*
         |--------------------------------------------------------------------------
-        | Normalize Response
+        | Provider Response
         |--------------------------------------------------------------------------
         */
 
@@ -140,48 +163,31 @@ class AirtimeService
 
             'success' => true,
 
-            'reference' =>
-                $reference,
-
             'provider_reference' =>
-                $provider['transaction_id'],
+                $provider['transaction_id'] ?? null,
 
             'transaction_id' =>
-                $provider['transaction_id'],
+                $provider['transaction_id'] ?? null,
 
-            'operator_transaction_id' =>
-                $provider['operator_transaction_id']
-                ?? null,
+            'reference' =>
+                $provider['reference'] ?? $reference,
 
             'status' =>
                 strtolower(
-                    $provider['status']
-                    ?? 'pending'
+                    $provider['status'] ?? 'completed'
                 ),
 
             'amount' =>
-                (float) (
-                    $provider['amount']
-                    ?? $data['amount']
-                ),
+                $provider['amount'] ?? $amount,
 
             'currency' =>
-                $provider['currency']
-                ?? null,
-
-            'recipient' =>
-                $provider['recipient']
-                ?? [
-                    'phone' =>
-                        $data['phone'],
-                ],
+                $provider['currency'] ?? null,
 
             'message' =>
                 'Airtime purchase successful.',
 
-            'provider_response' =>
-                $provider['raw']
-                ?? null,
+            'raw' =>
+                $provider['raw'] ?? null,
 
         ];
     }
