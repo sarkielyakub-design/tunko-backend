@@ -123,34 +123,40 @@ class WalletTransferController extends Controller
     /**
      * Receipt.
      */
-  public function receipt(string $reference)
-{
+ public function receipt(
+    string $reference,
+    Request $request
+) {
     try {
 
         return response()->json([
 
             'success' => true,
 
-            'message' => 'Receipt loaded successfully.',
+            'message' =>
+                'Receipt loaded successfully.',
 
-            'data' => $this->walletTransferService
-                ->receipt($reference),
+            'data' =>
+                $this->walletTransferService
+                    ->receipt(
+                        $reference,
+                        $request->user()
+                    ),
 
         ]);
 
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
 
         return response()->json([
 
             'success' => false,
 
-            'message' => $e->getMessage(),
+            'message' =>
+                $e->getMessage(),
 
-        ],404);
-
+        ], 404);
     }
 }
-
     /**
      * Beneficiaries.
      */

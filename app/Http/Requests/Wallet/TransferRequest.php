@@ -9,15 +9,6 @@ class TransferRequest extends FormRequest
     /**
      * Authorize request.
      */
-    public function transfer(TransferRequest $request)
-{
-    return response()->json([
-        'request' => $request->validated(),
-    ]);
-
-    $sender = $request->user();
-   
-}
     public function authorize(): bool
     {
         return auth()->check();
@@ -34,12 +25,21 @@ class TransferRequest extends FormRequest
             |--------------------------------------------------------------------------
             | Recipient
             |--------------------------------------------------------------------------
+            |
+            | The Flutter application sends the recipient as:
+            |
+            | - Wallet number
+            | - Phone number
+            | - Username
+            | - Email
+            |
             */
 
-            'recipient_id' => [
+            'recipient' => [
                 'required',
-                'integer',
-                'exists:users,id',
+                'string',
+                'min:2',
+                'max:255',
             ],
 
             /*
@@ -68,15 +68,16 @@ class TransferRequest extends FormRequest
 
             /*
             |--------------------------------------------------------------------------
-            | Remark
+            | Description
             |--------------------------------------------------------------------------
             */
 
-            'remark' => [
+            'description' => [
                 'nullable',
                 'string',
                 'max:255',
             ],
+
         ];
     }
 
@@ -87,11 +88,17 @@ class TransferRequest extends FormRequest
     {
         return [
 
-            'recipient_id.required' =>
+            'recipient.required' =>
                 'Recipient is required.',
 
-            'recipient_id.exists' =>
-                'Recipient not found.',
+            'recipient.string' =>
+                'Recipient must be a valid value.',
+
+            'recipient.min' =>
+                'Recipient information is too short.',
+
+            'recipient.max' =>
+                'Recipient information is too long.',
 
             'amount.required' =>
                 'Transfer amount is required.',
@@ -100,7 +107,7 @@ class TransferRequest extends FormRequest
                 'Amount must be numeric.',
 
             'amount.min' =>
-                'Minimum transfer amount is ₦1.',
+                'Minimum transfer amount is 1.',
 
             'amount.max' =>
                 'Maximum transfer amount exceeded.',
@@ -111,8 +118,9 @@ class TransferRequest extends FormRequest
             'pin.digits' =>
                 'Transaction PIN must be exactly 4 digits.',
 
-            'remark.max' =>
-                'Remark cannot exceed 255 characters.',
+            'description.max' =>
+                'Description cannot exceed 255 characters.',
+
         ];
     }
 
@@ -123,11 +131,15 @@ class TransferRequest extends FormRequest
     {
         $this->merge([
 
-            'recipient_id' => (int) $this->recipient_id,
+            'recipient' => trim(
+                (string) $this->input('recipient')
+            ),
 
-            'amount' => (float) $this->amount,
+            'amount' => (float) $this->input('amount'),
 
-            'remark' => trim($this->remark ?? ''),
+            'description' => trim(
+                (string) $this->input('description', '')
+            ) ?: null,
 
         ]);
     }

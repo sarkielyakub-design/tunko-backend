@@ -30,13 +30,16 @@ class AirtimeController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    if (!Hash::check(
-        $request->pin,
-        $user->transaction_pin
-    )) {
+    if (
+        empty($user->transaction_pin) ||
+        !Hash::check(
+            $request->pin,
+            $user->transaction_pin
+        )
+    ) {
         return response()->json([
-            "success" => false,
-            "message" => "Invalid transaction PIN."
+            'success' => false,
+            'message' => 'Invalid transaction PIN.',
         ], 422);
     }
 
@@ -46,11 +49,26 @@ class AirtimeController extends Controller
     |--------------------------------------------------------------------------
     */
 
+    $user->load('wallet');
+
     if (!$user->wallet) {
         return response()->json([
-            "success" => false,
-            "message" => "Wallet not found."
+            'success' => false,
+            'message' => 'Wallet not found.',
         ], 404);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Wallet Active
+    |--------------------------------------------------------------------------
+    */
+
+    if (!$user->wallet->is_active) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Wallet is inactive.',
+        ], 422);
     }
 
     /*
@@ -59,10 +77,13 @@ class AirtimeController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    if ($user->wallet->balance < $request->amount) {
+    if (
+        $user->wallet->balance <
+        $request->amount
+    ) {
         return response()->json([
-            "success" => false,
-            "message" => "Insufficient wallet balance."
+            'success' => false,
+            'message' => 'Insufficient wallet balance.',
         ], 422);
     }
 
@@ -70,29 +91,51 @@ class AirtimeController extends Controller
 
     try {
 
-        $reference = "AIR".strtoupper(Str::random(12));
-
         /*
         |--------------------------------------------------------------------------
-        | Provider Purchase
+        | Generate Reference
         |--------------------------------------------------------------------------
         */
 
-       $provider = $this->airtimeService->purchase([
-    "reference" => $reference,
-    "operator_id" => $request->operator_id,
-    "country_code" => $request->country_code,
-    "phone" => $request->phone,
-    "amount" => $request->amount,
-]);
-        if (!$provider["success"]) {
+        $reference =
+            'AIR' .
+            strtoupper(
+                Str::random(12)
+            );
 
-            DB::rollBack();
+        /*
+        |--------------------------------------------------------------------------
+        | Purchase From Reloadly
+        |--------------------------------------------------------------------------
+        */
 
-            return response()->json([
-                "success" => false,
-                "message" => $provider["message"]
-            ], 422);
+        $provider =
+            $this->airtimeService->purchase([
+
+                'reference' =>
+                    $reference,
+
+                'operator_id' =>
+                    $request->operator_id,
+
+                'country_code' =>
+                    $request->country_code,
+
+                'phone' =>
+                    $request->phone,
+
+                'amount' =>
+                    (float) $request->amount,
+
+            ]);
+
+        if (
+            empty($provider['success'])
+        ) {
+            throw new \Exception(
+                $provider['message']
+                ?? 'Airtime purchase failed.'
+            );
         }
 
         /*
@@ -102,7 +145,7 @@ class AirtimeController extends Controller
         */
 
         $user->wallet->decrement(
-            "balance",
+            'balance',
             $request->amount
         );
 
@@ -111,97 +154,210 @@ class AirtimeController extends Controller
         | Save Airtime
         |--------------------------------------------------------------------------
         */
-$airtime = Airtime::create([
-    "user_id" => $user->id,
 
-    "reference" => $reference,
+        $airtime = Airtime::create([
 
-    "country_id" => $country->id,
+            'user_id' =>
+                $user->id,
 
-    "country" => $country->name,
+            'reference' =>
+                $reference,
 
-    "network" => $request->network,
+            /*
+             * IMPORTANT:
+             * This is ISO code, not countries.id.
+             */
+            'country_id' =>
+                $request->country_code,
 
-    "phone" => $request->phone,
+            'country' =>
+                $request->country,
 
-    "amount" => $request->amount,
+            'network' =>
+                $request->network,
 
-    "currency" => $user->wallet->currency,
+            'phone' =>
+                $request->phone,
 
-    "provider" => "Reloadly",
+            'amount' =>
+                $request->amount,
 
-    "provider_reference" =>
-        $provider["provider_reference"],
+            'currency' =>
+                $user->wallet->currency,
 
-    "status" => "completed",
-]);
+            'provider' =>
+                'Reloadly',
+
+            'provider_reference' =>
+                $provider['provider_reference'] ?? null,
+
+            'status' =>
+                $provider['status'] ?? 'completed',
+
+        ]);
+
         /*
         |--------------------------------------------------------------------------
-        | Transaction
+        | Save Transaction
         |--------------------------------------------------------------------------
         */
 
         Transaction::create([
 
-            "user_id" => $user->id,
+            'user_id' =>
+                $user->id,
 
-            "reference" => $reference,
+            'reference' =>
+                $reference,
 
-            "type" => "airtime",
+            'type' =>
+                'airtime',
 
-            "title" => "Airtime Purchase",
+            'title' =>
+                'Airtime Purchase',
 
-            "description" =>
-                "Airtime for ".$request->phone,
+            'description' =>
+                'Airtime for ' .
+                $request->phone,
 
-            "amount" => $request->amount,
+            'amount' =>
+                $request->amount,
 
-            "currency" => $user->wallet->currency,
+            'currency' =>
+                $user->wallet->currency,
 
-            "fee" => 0,
+            'fee' =>
+                0,
 
-            "total" => $request->amount,
+            'total' =>
+                $request->amount,
 
-            "status" => "completed",
+            'status' =>
+                $provider['status'] ?? 'completed',
+
+            'meta' => [
+
+                'country_code' =>
+                    $request->country_code,
+
+                'operator_id' =>
+                    $request->operator_id,
+
+                'network' =>
+                    $request->network,
+
+                'phone' =>
+                    $request->phone,
+
+                'provider' =>
+                    'Reloadly',
+
+                'provider_reference' =>
+                    $provider['provider_reference']
+                    ?? null,
+
+            ],
 
         ]);
 
         DB::commit();
 
+        /*
+        |--------------------------------------------------------------------------
+        | Response
+        |--------------------------------------------------------------------------
+        */
+
         return response()->json([
 
-            "success" => true,
+            'success' =>
+                true,
 
-            "message" => "Airtime purchased successfully.",
+            'message' =>
+                'Airtime purchased successfully.',
 
-            "data" => [
+            'data' => [
 
-                "reference" => $reference,
+                'id' =>
+                    $airtime->id,
 
-                "phone" => $request->phone,
+                'reference' =>
+                    $reference,
 
-                "amount" => $request->amount,
+                'provider_reference' =>
+                    $provider['provider_reference']
+                    ?? null,
 
-                "network" => $request->network,
+                'phone' =>
+                    $request->phone,
 
-                "status" => "completed",
+                'country_code' =>
+                    $request->country_code,
 
-            ]
+                'country' =>
+                    $request->country,
+
+                'network' =>
+                    $request->network,
+
+                'amount' =>
+                    (float) $request->amount,
+
+                'currency' =>
+                    $user->wallet->currency,
+
+                'status' =>
+                    $provider['status']
+                    ?? 'completed',
+
+                'wallet_balance' =>
+                    $user->wallet
+                        ->fresh()
+                        ->balance,
+
+                'created_at' =>
+                    $airtime->created_at,
+
+            ],
 
         ]);
 
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
 
         DB::rollBack();
 
+        Log::error(
+            'Airtime purchase failed',
+            [
+                'user_id' =>
+                    $user->id,
+
+                'country_code' =>
+                    $request->country_code,
+
+                'operator_id' =>
+                    $request->operator_id,
+
+                'phone' =>
+                    $request->phone,
+
+                'amount' =>
+                    $request->amount,
+
+                'error' =>
+                    $e->getMessage(),
+            ]
+        );
+
         return response()->json([
 
-            "success" => false,
+            'success' =>
+                false,
 
-            "message" => $e->getMessage(),
+            'message' =>
+                $e->getMessage(),
 
-        ],500);
-
+        ], 500);
     }
 }
 public function __construct(
