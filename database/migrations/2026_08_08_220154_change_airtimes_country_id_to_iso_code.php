@@ -8,33 +8,50 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::disableForeignKeyConstraints();
+        /*
+        |--------------------------------------------------------------------------
+        | Current schema already contains country_code.
+        |
+        | Remove the old country_id foreign key/column safely.
+        |--------------------------------------------------------------------------
+        */
 
-        Schema::table('airtimes', function (Blueprint $table) {
-            $table->dropColumn('country_id');
-        });
+        if (!Schema::hasTable('airtimes')) {
+            return;
+        }
 
-        Schema::enableForeignKeyConstraints();
+        if (Schema::hasColumn('airtimes', 'country_id')) {
 
-        Schema::table('airtimes', function (Blueprint $table) {
-            $table->string('country_id', 2)
-                ->after('reference');
-        });
+            Schema::table('airtimes', function (Blueprint $table) {
+                $table->dropForeign(['country_id']);
+            });
+
+            Schema::table('airtimes', function (Blueprint $table) {
+                $table->dropColumn('country_id');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::disableForeignKeyConstraints();
+        if (!Schema::hasTable('airtimes')) {
+            return;
+        }
 
-        Schema::table('airtimes', function (Blueprint $table) {
-            $table->dropColumn('country_id');
-        });
+        if (!Schema::hasColumn('airtimes', 'country_id')) {
 
-        Schema::enableForeignKeyConstraints();
+            Schema::table('airtimes', function (Blueprint $table) {
+                $table->foreignId('country_id')
+                    ->nullable()
+                    ->after('reference');
+            });
 
-        Schema::table('airtimes', function (Blueprint $table) {
-            $table->foreignId('country_id')
-                ->after('reference');
-        });
+            Schema::table('airtimes', function (Blueprint $table) {
+                $table->foreign('country_id')
+                    ->references('id')
+                    ->on('countries')
+                    ->nullOnDelete();
+            });
+        }
     }
 };

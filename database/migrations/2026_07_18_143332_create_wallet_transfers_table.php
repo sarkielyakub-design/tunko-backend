@@ -8,11 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('wallet_transfers')) {
+            return;
+        }
+
         Schema::create('wallet_transfers', function (Blueprint $table) {
+
             $table->id();
 
             $table->string('reference');
-$table->index('reference');
 
             $table->foreignId('sender_id')
                 ->constrained('users')
@@ -32,7 +36,8 @@ $table->index('reference');
 
             $table->decimal('amount', 18, 2);
 
-            $table->decimal('fee', 18, 2)->default(0);
+            $table->decimal('fee', 18, 2)
+                ->default(0);
 
             $table->decimal('total', 18, 2);
 
@@ -43,18 +48,29 @@ $table->index('reference');
                 'processing',
                 'completed',
                 'failed',
-                'reversed'
+                'reversed',
             ])->default('pending');
 
-            $table->text('description')->nullable();
+            $table->text('description')
+                ->nullable();
 
-            $table->timestamp('completed_at')->nullable();
+            $table->timestamp('completed_at')
+                ->nullable();
 
             $table->timestamps();
 
+            /*
+            |--------------------------------------------------------------------------
+            | Indexes
+            |--------------------------------------------------------------------------
+            */
+
             $table->index('reference');
+
             $table->index('sender_id');
+
             $table->index('recipient_id');
+
             $table->index('status');
         });
     }

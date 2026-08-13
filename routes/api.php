@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\CinetPayController;
 use App\Http\Controllers\Api\V1\TransactionController;
 use App\Http\Controllers\Api\V1\TransferController;
 use App\Http\Controllers\Api\V1\WalletTransferController;
+use App\Http\Controllers\Api\V1\OfficeTransferController;
 use App\Http\Controllers\Api\V1\BeneficiaryController;
 use App\Http\Controllers\Api\V1\DataController;
 use App\Http\Controllers\Api\V1\AirtimeController;
@@ -39,11 +40,8 @@ require __DIR__.'/api/admin.php';
 Route::get('/test', function () {
 
     return response()->json([
-
         'success' => true,
-
         'message' => 'Tunko API is working',
-
     ]);
 
 });
@@ -58,7 +56,7 @@ Route::prefix('v1')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Authentication (Public)
+    | Authentication - Public
     |--------------------------------------------------------------------------
     */
 
@@ -132,6 +130,7 @@ Route::prefix('v1')->group(function () {
             ProfileController::class,
             'update',
         ]);
+
         /*
         |--------------------------------------------------------------------------
         | Wallet
@@ -184,7 +183,7 @@ Route::prefix('v1')->group(function () {
 
             /*
             |--------------------------------------------------------------------------
-            | Manual Deposit Request
+            | Manual Deposit
             |--------------------------------------------------------------------------
             */
 
@@ -216,8 +215,8 @@ Route::prefix('v1')->group(function () {
         | CinetPay Webhook
         |--------------------------------------------------------------------------
         |
-        | No auth middleware should protect provider webhooks.
-        |--------------------------------------------------------------------------
+        | Provider webhook does not use auth middleware.
+        |
         */
 
         Route::post('/webhooks/cinetpay', [
@@ -227,46 +226,63 @@ Route::prefix('v1')->group(function () {
 
         /*
         |--------------------------------------------------------------------------
+        | Reloadly Test
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/reloadly-test', function () {
+
+            $response = Illuminate\Support\Facades\Http::baseUrl(
+                config('reloadly.topup_url')
+            )
+                ->timeout(30)
+                ->withHeaders([
+                    'Authorization' =>
+                        'Bearer ' .
+                        app(
+                            \App\Services\Reloadly\Auth\ReloadlyAuthService::class
+                        )->token(),
+
+                    'Accept' =>
+                        'application/com.reloadly.topups-v1+json',
+
+                    'Content-Type' =>
+                        'application/json',
+                ])
+                ->get('/countries');
+
+            return response()->json([
+                'status' => $response->status(),
+                'body' => $response->json(),
+            ]);
+
+        });
+
+        /*
+        |--------------------------------------------------------------------------
         | Transactions
         |--------------------------------------------------------------------------
         */
-Route::get('/reloadly-test', function () {
 
-    $response = Illuminate\Support\Facades\Http::baseUrl(
-        config('reloadly.topup_url')
-    )
-    ->timeout(30)
-    ->withHeaders([
-        'Authorization' => 'Bearer '.app(\App\Services\Reloadly\Auth\ReloadlyAuthService::class)->token(),
-        'Accept' => 'application/com.reloadly.topups-v1+json',
-        'Content-Type' => 'application/json',
-    ])
-    ->get('/countries');
+        Route::prefix('transactions')->group(function () {
 
-    return response()->json([
-        'status' => $response->status(),
-        'body' => $response->json(),
-    ]);
-});
-    Route::prefix('transactions')->group(function () {
+            Route::get('/', [
+                TransactionController::class,
+                'index',
+            ]);
 
-        Route::get('/', [
-            TransactionController::class,
-            'index',
-        ]);
+            Route::get('/receipt/{reference}', [
+                TransactionController::class,
+                'receipt',
+            ]);
 
-        Route::get('/receipt/{reference}', [
-            TransactionController::class,
-            'receipt',
-        ]);
+        });
 
-    });
-
-    /*
-    |--------------------------------------------------------------------------
-    | Data (Reloadly)
-    |--------------------------------------------------------------------------
-    */
+        /*
+        |--------------------------------------------------------------------------
+        | Data - Reloadly
+        |--------------------------------------------------------------------------
+        */
 
         Route::prefix('data')->group(function () {
 
@@ -283,7 +299,7 @@ Route::get('/reloadly-test', function () {
 
             /*
             |--------------------------------------------------------------------------
-            | Networks / Operators
+            | Networks
             |--------------------------------------------------------------------------
             */
 
@@ -294,7 +310,7 @@ Route::get('/reloadly-test', function () {
 
             /*
             |--------------------------------------------------------------------------
-            | Bundles / Products
+            | Bundles
             |--------------------------------------------------------------------------
             */
 
@@ -327,7 +343,7 @@ Route::get('/reloadly-test', function () {
 
             /*
             |--------------------------------------------------------------------------
-            | Purchase History
+            | History
             |--------------------------------------------------------------------------
             */
 
@@ -418,34 +434,131 @@ Route::get('/reloadly-test', function () {
 
         Route::prefix('wallet-transfer')->group(function () {
 
+            /*
+            |--------------------------------------------------------------------------
+            | Verify
+            |--------------------------------------------------------------------------
+            */
+
             Route::post('/verify', [
                 WalletTransferController::class,
                 'verify',
             ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Quote
+            |--------------------------------------------------------------------------
+            */
 
             Route::post('/quote', [
                 WalletTransferController::class,
                 'quote',
             ]);
 
+            /*
+            |--------------------------------------------------------------------------
+            | Send
+            |--------------------------------------------------------------------------
+            */
+
             Route::post('/send', [
                 WalletTransferController::class,
                 'send',
             ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | History
+            |--------------------------------------------------------------------------
+            */
 
             Route::get('/history', [
                 WalletTransferController::class,
                 'history',
             ]);
 
+            /*
+            |--------------------------------------------------------------------------
+            | Receipt
+            |--------------------------------------------------------------------------
+            */
+
             Route::get('/receipt/{reference}', [
                 WalletTransferController::class,
                 'receipt',
             ]);
 
+            /*
+            |--------------------------------------------------------------------------
+            | Beneficiaries
+            |--------------------------------------------------------------------------
+            */
+
             Route::get('/beneficiaries', [
                 WalletTransferController::class,
                 'beneficiaries',
+            ]);
+
+        });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Office Transfer
+        |--------------------------------------------------------------------------
+        |
+        | Cash transfer between Tunko offices.
+        |
+        */
+
+        Route::prefix('office-transfers')->group(function () {
+
+            /*
+            |--------------------------------------------------------------------------
+            | Quote
+            |--------------------------------------------------------------------------
+            */
+
+            Route::post('/quote', [
+                OfficeTransferController::class,
+                'quote',
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Send
+            |--------------------------------------------------------------------------
+            */
+
+            Route::post('/send', [
+                OfficeTransferController::class,
+                'send',
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | History
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get('/history', [
+                OfficeTransferController::class,
+                'history',
+            ]);
+            Route::get('/destinations', [
+    OfficeTransferController::class,
+    'destinations',
+]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Receipt
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get('/receipt/{reference}', [
+                OfficeTransferController::class,
+                'receipt',
             ]);
 
         });
@@ -621,7 +734,7 @@ Route::get('/reloadly-test', function () {
 
             /*
             |--------------------------------------------------------------------------
-            | Networks / Operators
+            | Networks
             |--------------------------------------------------------------------------
             */
 
@@ -632,7 +745,7 @@ Route::get('/reloadly-test', function () {
 
             /*
             |--------------------------------------------------------------------------
-            | Products / Bundles
+            | Products
             |--------------------------------------------------------------------------
             */
 
