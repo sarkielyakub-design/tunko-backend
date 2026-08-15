@@ -15,124 +15,182 @@ use Carbon\Carbon;
 use Exception;
 
 class OfficeTransferService
+{/*
+|--------------------------------------------------------------------------
+| DESTINATIONS
+|--------------------------------------------------------------------------
+|
+| Returns countries and cities where Tunko currently has active offices.
+|
+| The office itself is NOT selected by the sender.
+|
+*/
+
+public function destinations(): array
 {
     /*
     |--------------------------------------------------------------------------
-    | DESTINATIONS
-    |--------------------------------------------------------------------------
-    |
-    | Returns countries and cities where Tunko currently has active offices.
-    |
-    | The office itself is NOT selected by the sender.
-    |
-    | Example:
-    |
-    | Chad
-    |   - N'Djamena
-    |   - Moundou
-    |
-    | Niger
-    |   - Niamey
-    |   - Maradi
-    |
+    | LOAD ACTIVE OFFICES
     |--------------------------------------------------------------------------
     */
 
-    public function destinations(): array
-    {
-        $countries = Country::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
+    $offices = Office::query()
+        ->where('is_active', true)
+        ->orderBy('country')
+        ->orderBy('city')
+        ->get();
 
-        $offices = Office::query()
-            ->where('is_active', true)
-            ->orderBy('country')
-            ->orderBy('city')
-            ->get();
+    /*
+    |--------------------------------------------------------------------------
+    | NO OFFICES
+    |--------------------------------------------------------------------------
+    */
 
-        $result = [];
-
-        foreach ($countries as $country) {
-
-            $countryName = strtolower(
-                trim($country->name)
-            );
-
-            $countryIso2 = strtolower(
-                trim((string) $country->iso2)
-            );
-
-            $countryIso3 = strtolower(
-                trim((string) $country->iso3)
-            );
-
-            $cities = $offices
-                ->filter(function ($office) use (
-                    $countryName,
-                    $countryIso2,
-                    $countryIso3
-                ) {
-
-                    $officeCountry = strtolower(
-                        trim((string) $office->country)
-                    );
-
-                    return $officeCountry === $countryName
-                        || (
-                            $countryIso2 !== ''
-                            && $officeCountry === $countryIso2
-                        )
-                        || (
-                            $countryIso3 !== ''
-                            && $officeCountry === $countryIso3
-                        );
-                })
-                ->map(function ($office) {
-                    return trim(
-                        (string) $office->city
-                    );
-                })
-                ->filter(function ($city) {
-                    return $city !== '';
-                })
-                ->unique()
-                ->values()
-                ->all();
-
-            if (empty($cities)) {
-                continue;
-            }
-
-            $result[] = [
-
-                'country_id' =>
-                    $country->id,
-
-                'country' =>
-                    $country->name,
-
-                'iso2' =>
-                    $country->iso2,
-
-                'iso3' =>
-                    $country->iso3,
-
-                'phone_code' =>
-                    $country->phone_code,
-
-                'currency' =>
-                    $country->currency,
-
-                'cities' =>
-                    $cities,
-            ];
-        }
-
-        return $result;
+    if ($offices->isEmpty()) {
+        return [];
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | GROUP OFFICES BY COUNTRY
+    |--------------------------------------------------------------------------
+    */
 
+    $grouped = $offices->groupBy(function ($office) {
+        return strtolower(
+            trim(
+                (string) $office->country
+            )
+        );
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | BUILD DESTINATIONS
+    |--------------------------------------------------------------------------
+    */
+
+    $result = [];
+
+    foreach ($grouped as $countryKey => $countryOffices) {
+
+        if ($countryOffices->isEmpty()) {
+            continue;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | COUNTRY NAME
+        |--------------------------------------------------------------------------
+        */
+
+        $firstOffice =
+            $countryOffices->first();
+
+        $countryName =
+            trim(
+                (string) $firstOffice->country
+            );
+
+        if ($countryName === '') {
+            continue;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | CITIES
+        |--------------------------------------------------------------------------
+        */
+
+        $cities = $countryOffices
+            ->map(function ($office) {
+                return trim(
+                    (string) $office->city
+                );
+            })
+            ->filter(function ($city) {
+                return $city !== '';
+            })
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($cities)) {
+            continue;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | FIND COUNTRY METADATA
+        |--------------------------------------------------------------------------
+        |
+        | Country table is optional here.
+        | If a matching country exists, we use its metadata.
+        |
+        */
+
+        $country =
+            Country::query()
+                ->whereRaw(
+                    'LOWER(TRIM(name)) = ?',
+                    [
+                        strtolower(
+                            $countryName
+                        ),
+                    ]
+                )
+                ->first();
+
+        /*
+        |--------------------------------------------------------------------------
+        | RESPONSE
+        |--------------------------------------------------------------------------
+        */
+
+        $result[] = [
+
+            'country_id' =>
+                $country?->id,
+
+            'country' =>
+                $countryName,
+
+            'iso2' =>
+                $country?->iso2,
+
+            'iso3' =>
+                $country?->iso3,
+
+            'phone_code' =>
+                $country?->phone_code,
+
+            'currency' =>
+                $country?->currency
+                    ?: $firstOffice->currency,
+
+            'cities' =>
+                $cities,
+        ];
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | SORT COUNTRIES
+    |--------------------------------------------------------------------------
+    */
+
+    usort(
+        $result,
+        function ($a, $b) {
+            return strcasecmp(
+                $a['country'],
+                $b['country']
+            );
+        }
+    );
+
+    return $result;
+}
     /*
     |--------------------------------------------------------------------------
     | QUOTE
