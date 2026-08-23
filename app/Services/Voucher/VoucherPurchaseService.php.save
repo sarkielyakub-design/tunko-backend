@@ -1,0 +1,369 @@
+<?php
+
+namespace App\Services\Voucher;
+
+use App\Models\Transaction;
+use App\Models\User;
+use App\Models\Voucher;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Throwable;
+use Exception;
+
+class VoucherPurchaseService
+{
+    /**
+     * Purchase one physical voucher.
+     *
+     * The voucher is selected and locked inside
+     * the database transaction to prevent two
+     * customers from receiving the same PIN.
+     */
+    public function purchase(
+        User $user,
+        array $data
+    ): array {
+
+        return DB::transaction(function () use (
+            $user,
+            $data
+        ) {
+
+            /*
+            |--------------------------------------------------------------------------
+            | Load and lock wallet
+            |--------------------------------------------------------------------------
+            */
+
+            $wallet = $user->wallet()
+                ->lockForUpdate()
+                ->first();
+
+            if (!$wallet) {
+                throw new Exception(
+                    'Wallet not found.'
+                );
+            }
+
+            if (!$wallet->is_active) {
+                throw new Exception(
+                    'Wallet is inactive.'
+                );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Find available voucher
+            |--------------------------------------------------------------------------
+            */
+
+            $query = Voucher::query()
+                ->where(
+                    'status',
+                    'available'
+                )
+                ->where(
+                    'type',
+                    $data['type']
+                )
+                ->where(
+                    'country_code',
+                    strtoupper(
+                        $data['country_code']
+                    )
+                );
+
+            /*
+            |--------------------------------------------------------------------------
+            | Optional network
+            |--------------------------------------------------------------------------
+            */
+
+            if (
+                !empty(
+                    $data['network_id']
+                )
+            ) {
+                $query->where(
+                    'network_id',
+                    $data['network_id']
+                );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Optional product
+            |--------------------------------------------------------------------------
+            */
+
+            if (
+                !empty(
+                    $data['product_name']
+                )
+            ) {
+                $query->where(
+                    'product_name',
+                    $data['product_name']
+                );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Amount
+            |--------------------------------------------------------------------------
+            */
+
+            $query->where(
+                'amount',
+                $data['amount']
+            );
+
+            /*
+            |--------------------------------------------------------------------------
+            | Expiry
+            |--------------------------------------------------------------------------
+            */
+
+            $query->where(function ($q) {
+
+                $q->whereNull(
+                    'expires_at'
+                )
+
+                ->orWhere(
+                    'expires_at',
+                    '>',
+                    now()
+                );
+
+            });
+
+            /*
+            |--------------------------------------------------------------------------
+            | Lock ONE voucher
+            |--------------------------------------------------------------------------
+            */
+
+            $voucher = $query
+                ->orderBy(
+                    'id'
+                )
+                ->lockForUpdate()
+                ->first();
+
+            if (!$voucher) {
+
+                throw new Exception(
+                    'This voucher is currently unavailable.'
+                );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Check wallet balance
+            |--------------------------------------------------------------------------
+            */
+
+            $amount = (float)
+                $voucher->amount;
+
+            if (
+                (float) $wallet->balance
+                < $amount
+            ) {
+                throw new Exception(
+                    'Insufficient wallet balance.'
+                );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Generate purchase reference
+            |--------------------------------------------------------------------------
+            */
+
+            $reference =
+                $this->generateReference();
+
+            /*
+            |--------------------------------------------------------------------------
+            | Debit wallet
+            |--------------------------------------------------------------------------
+            */
+
+            $wallet->balance =
+                (float) $wallet->balance
+                - $amount;
+
+            $wallet->save();
+
+            /*
+            |--------------------------------------------------------------------------
+            | Mark voucher SOLD
+            |--------------------------------------------------------------------------
+            */
+
+            $voucher->update([
+
+                'status' =>
+                    'sold',
+
+                'user_id' =>
+                    $user->id,
+
+                'purchase_reference' =>
+                    $reference,
+
+                'sold_at' =>
+                    now(),
+
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Save transaction
+            |--------------------------------------------------------------------------
+            */
+
+            Transaction::create([
+
+                'user_id' =>
+                    $user->id,
+
+                'reference' =>
+                    $reference,
+
+                'type' =>
+                    'voucher',
+
+                'title' =>
+                    'Voucher Purchase',
+
+                'description' =>
+                    ucfirst(
+                        $voucher->type
+                    ) .
+                    ' voucher purchase',
+
+                'amount' =>
+                    $amount,
+
+                'currency' =>
+                    $voucher->currency,
+
+                'fee' =>
+                    0,
+
+                'total' =>
+                    $amount,
+
+                'status' =>
+                    'completed',
+
+                'meta' => [
+
+                    'voucher_id' =>
+                        $voucher->id,
+
+                    'voucher_reference' =>
+                        $voucher->reference,
+
+                    'voucher_type' =>
+                        $voucher->type,
+
+                    'country_code' =>
+                        $voucher->country_code,
+
+                    'network_id' =>
+                        $voucher->network_id,
+
+                    'network_name' =>
+                        $voucher->network_name,
+
+                    'product_name' =>
+                        $voucher->product_name,
+
+                ],
+
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Return customer result
+            |--------------------------------------------------------------------------
+            |
+            | IMPORTANT:
+            | The PIN is returned ONLY after the
+            | voucher has successfully been sold.
+            |
+            */
+
+            return [
+
+                'reference' =>
+                    $reference,
+
+                'voucher_reference' =>
+                    $voucher->reference,
+
+                'type' =>
+                    $voucher->type,
+
+                'country_code' =>
+                    $voucher->country_code,
+
+                'network_name' =>
+                    $voucher->network_name,
+
+                'product_name' =>
+                    $voucher->product_name,
+
+                'amount' =>
+                    $amount,
+
+                'currency' =>
+                    $voucher->currency,
+
+                'pin' =>
+                    $voucher->pin,
+
+                'status' =>
+                    'completed',
+
+                'wallet_balance' =>
+                    (float)
+                    $wallet->fresh()->balance,
+
+                'sold_at' =>
+                    $voucher->sold_at,
+
+            ];
+        });
+    }
+
+
+    /**
+     * Generate unique purchase reference.
+     */
+    private function generateReference(): string
+    {
+        do {
+
+            $reference =
+                'VCH-' .
+                now()->format('YmdHis') .
+                '-' .
+                strtoupper(
+                    Str::random(8)
+                );
+
+        } while (
+            Transaction::where(
+                'reference',
+                $reference
+            )->exists()
+        );
+
+        return $reference;
+    }
+

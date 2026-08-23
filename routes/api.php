@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\V1\KycController;
 use App\Http\Controllers\Api\V1\OtpController;
 use App\Http\Controllers\Api\V1\PasswordController;
 use App\Http\Controllers\Api\V1\PinController;
+use App\Http\Controllers\Api\V1\VoucherController;
 
 require __DIR__.'/api/admin.php';
 
@@ -810,7 +811,89 @@ Route::prefix('v1')->group(function () {
             ]);
 
         });
+/*
+|--------------------------------------------------------------------------
+| Vouchers
+|--------------------------------------------------------------------------
+|
+| Physical airtime/data cards purchased by Tunko
+| and sold to customers.
+|
+*/
 
+Route::prefix('vouchers')->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Available Voucher Products
+    |--------------------------------------------------------------------------
+    |
+    | Returns only products that have available
+    | physical vouchers in inventory.
+    |
+    */
+
+    Route::get('/products', [
+        VoucherController::class,
+        'products',
+    ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Available Vouchers / Product Availability
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/availability', [
+        VoucherController::class,
+        'availability',
+    ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Purchase Voucher
+    |--------------------------------------------------------------------------
+    |
+    | Customer pays from Tunko wallet.
+    | System selects an available voucher,
+    | marks it SOLD and returns the voucher
+    | reference/code to the customer.
+    |
+    */
+
+    Route::post('/purchase', [
+        VoucherController::class,
+        'purchase',
+    ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Purchase History
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/history', [
+        VoucherController::class,
+        'history',
+    ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Receipt
+    |--------------------------------------------------------------------------
+    |
+    | The PIN/code can be displayed here because
+    | the controller will verify that the voucher
+    | belongs to the authenticated customer.
+    |
+    */
+
+    Route::get('/receipt/{reference}', [
+        VoucherController::class,
+        'receipt',
+    ]);
+
+});
         /*
         |--------------------------------------------------------------------------
         | Exchange Rates

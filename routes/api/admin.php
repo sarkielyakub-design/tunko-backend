@@ -20,10 +20,12 @@ use App\Http\Controllers\Admin\OfficeController;
 use App\Http\Controllers\Admin\AdminWalletController;
 use App\Http\Controllers\Admin\ReloadlyController;
 use App\Http\Controllers\Admin\ThunesController;
+use App\Http\Controllers\Admin\VoucherController;
+
 
 /*
 |--------------------------------------------------------------------------
-| Admin Authentication
+| ADMIN API
 |--------------------------------------------------------------------------
 */
 
@@ -31,7 +33,7 @@ Route::prefix('admin')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Public Routes
+    | PUBLIC ADMIN ROUTES
     |--------------------------------------------------------------------------
     */
 
@@ -40,9 +42,10 @@ Route::prefix('admin')->group(function () {
         [AuthController::class, 'login']
     );
 
+
     /*
     |--------------------------------------------------------------------------
-    | Protected Routes
+    | PROTECTED ADMIN ROUTES
     |--------------------------------------------------------------------------
     */
 
@@ -50,7 +53,7 @@ Route::prefix('admin')->group(function () {
 
         /*
         |--------------------------------------------------------------------------
-        | Authentication
+        | AUTHENTICATION
         |--------------------------------------------------------------------------
         */
 
@@ -64,9 +67,10 @@ Route::prefix('admin')->group(function () {
             [AuthController::class, 'profile']
         );
 
+
         /*
         |--------------------------------------------------------------------------
-        | Dashboard
+        | DASHBOARD
         |--------------------------------------------------------------------------
         */
 
@@ -75,9 +79,10 @@ Route::prefix('admin')->group(function () {
             [DashboardController::class, 'index']
         );
 
+
         /*
         |--------------------------------------------------------------------------
-        | Audit Logs
+        | AUDIT LOGS
         |--------------------------------------------------------------------------
         */
 
@@ -86,9 +91,10 @@ Route::prefix('admin')->group(function () {
             [AuditLogController::class, 'index']
         );
 
+
         /*
         |--------------------------------------------------------------------------
-        | Users
+        | USERS
         |--------------------------------------------------------------------------
         */
 
@@ -118,24 +124,11 @@ Route::prefix('admin')->group(function () {
                 '/{user}',
                 [UserController::class, 'destroy']
             );
-           
-
-            /*
-            |--------------------------------------------------------------------------
-            | User Details
-            |--------------------------------------------------------------------------
-            */
 
             Route::get(
                 '/{user}/details',
                 [UserController::class, 'details']
             );
-
-            /*
-            |--------------------------------------------------------------------------
-            | Wallet
-            |--------------------------------------------------------------------------
-            */
 
             Route::post(
                 '/{user}/credit',
@@ -146,12 +139,6 @@ Route::prefix('admin')->group(function () {
                 '/{user}/debit',
                 [UserController::class, 'debitWallet']
             );
-            
-            /*
-            |--------------------------------------------------------------------------
-            | Account
-            |--------------------------------------------------------------------------
-            */
 
             Route::post(
                 '/{user}/freeze',
@@ -172,499 +159,601 @@ Route::prefix('admin')->group(function () {
                 '/{user}/reset-pin',
                 [UserController::class, 'resetPin']
             );
-            });
-            
+        });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | EXCHANGE RATES
+        |--------------------------------------------------------------------------
+        */
+
+        Route::prefix('exchange-rates')->group(function () {
+
+            Route::get(
+                '/',
+                [ExchangeRateController::class, 'index']
+            );
+
+            Route::get(
+                '/statistics',
+                [ExchangeRateController::class, 'statistics']
+            );
+
+            Route::post(
+                '/',
+                [ExchangeRateController::class, 'store']
+            );
+
+            Route::post(
+                '/sync',
+                [ExchangeRateController::class, 'sync']
+            );
+
+            Route::get(
+                '/{exchangeRate}',
+                [ExchangeRateController::class, 'show']
+            );
+
+            Route::put(
+                '/{exchangeRate}',
+                [ExchangeRateController::class, 'update']
+            );
+
+            Route::delete(
+                '/{exchangeRate}',
+                [ExchangeRateController::class, 'destroy']
+            );
+        });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | VOUCHERS
+        |--------------------------------------------------------------------------
+        |
+        | Supplier cards/PIN inventory.
+        |
+        | IMPORTANT:
+        | Because we are already inside:
+        |
+        | Route::prefix('admin')
+        |
+        | these become:
+        |
+        | GET  /api/admin/vouchers
+        | POST /api/admin/vouchers
+        |
+        */
+
+        Route::prefix('vouchers')->group(function () {
+
+            Route::get(
+                '/',
+                [VoucherController::class, 'index']
+            );
+
+            Route::post(
+                '/',
+                [VoucherController::class, 'store']
+            );
+
+            Route::get(
+                '/{voucher}',
+                [VoucherController::class, 'show']
+            );
+
+            Route::delete(
+                '/{voucher}',
+                [VoucherController::class, 'destroy']
+            );
+
+            Route::post(
+                '/{voucher}/cancel',
+                [VoucherController::class, 'cancel']
+            );
+        });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | WITHDRAWALS
+        |--------------------------------------------------------------------------
+        */
+
+        Route::prefix('withdrawals')->group(function () {
+
+            Route::get(
+                '/',
+                [WithdrawalController::class, 'index']
+            );
+
+            Route::get(
+                '/statistics',
+                [WithdrawalController::class, 'statistics']
+            );
+
+            Route::get(
+                '/{withdrawal}',
+                [WithdrawalController::class, 'show']
+            );
+
+            Route::post(
+                '/{withdrawal}/approve',
+                [WithdrawalController::class, 'approve']
+            );
+
+            Route::post(
+                '/{withdrawal}/reject',
+                [WithdrawalController::class, 'reject']
+            );
+
+            Route::post(
+                '/{withdrawal}/cancel',
+                [WithdrawalController::class, 'cancel']
+            );
+
+            Route::post(
+                '/{withdrawal}/retry',
+                [WithdrawalController::class, 'retry']
+            );
+        });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | TRANSFERS
+        |--------------------------------------------------------------------------
+        */
+
+        Route::prefix('transfers')->group(function () {
+
+            Route::get(
+                '/',
+                [TransferController::class, 'index']
+            );
+
+            Route::get(
+                '/statistics',
+                [TransferController::class, 'statistics']
+            );
+
+            Route::get(
+                '/{transfer}',
+                [TransferController::class, 'show']
+            );
+
+            Route::post(
+                '/{transfer}/approve',
+                [TransferController::class, 'approve']
+            );
+
+            Route::post(
+                '/{transfer}/reject',
+                [TransferController::class, 'reject']
+            );
+
+            Route::post(
+                '/{transfer}/cancel',
+                [TransferController::class, 'cancel']
+            );
+
+            Route::post(
+                '/{transfer}/retry',
+                [TransferController::class, 'retry']
+            );
+        });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | DEPOSITS
+        |--------------------------------------------------------------------------
+        */
+
+        Route::prefix('deposits')->group(function () {
+
+            Route::get(
+                '/',
+                [DepositController::class, 'index']
+            );
+
+            Route::get(
+                '/statistics',
+                [DepositController::class, 'statistics']
+            );
+
+            Route::get(
+                '/{deposit}',
+                [DepositController::class, 'show']
+            );
+
+            Route::post(
+                '/{deposit}/approve',
+                [DepositController::class, 'approve']
+            );
+
+            Route::post(
+                '/{deposit}/reject',
+                [DepositController::class, 'reject']
+            );
+
+            Route::post(
+                '/{deposit}/cancel',
+                [DepositController::class, 'cancel']
+            );
+
+
             /*
-|--------------------------------------------------------------------------
-| Exchange Rate Management
-|--------------------------------------------------------------------------
-*/
+            |--------------------------------------------------------------------------
+            | ADMIN WALLET
+            |--------------------------------------------------------------------------
+            */
 
-Route::prefix('exchange-rates')->group(function () {
+            Route::prefix('admin-wallet')
+                ->controller(AdminWalletController::class)
+                ->group(function () {
 
-    Route::get(
-        '/',
-        [ExchangeRateController::class, 'index']
-    );
+                    Route::get(
+                        '/',
+                        'index'
+                    );
 
-    Route::get(
-        '/statistics',
-        [ExchangeRateController::class, 'statistics']
-    );
+                    Route::get(
+                        '/transactions',
+                        'transactions'
+                    );
 
-    Route::post(
-        '/',
-        [ExchangeRateController::class, 'store']
-    );
+                    Route::post(
+                        '/fund',
+                        'fund'
+                    );
 
-    Route::post(
-        '/sync',
-        [ExchangeRateController::class, 'sync']
-    );
+                    Route::put(
+                        '/{adminWallet}',
+                        'update'
+                    );
+                });
+        });
 
-    Route::get(
-        '/{exchangeRate}',
-        [ExchangeRateController::class, 'show']
-    );
 
-    Route::put(
-        '/{exchangeRate}',
-        [ExchangeRateController::class, 'update']
-    );
+        /*
+        |--------------------------------------------------------------------------
+        | TRANSACTIONS
+        |--------------------------------------------------------------------------
+        */
 
-    Route::delete(
-        '/{exchangeRate}',
-        [ExchangeRateController::class, 'destroy']
-    );
+        Route::prefix('transactions')->group(function () {
 
-});
-            /*
-|--------------------------------------------------------------------------
-| Withdrawal Management
-|--------------------------------------------------------------------------
-*/
+            Route::get(
+                '/',
+                [TransactionController::class, 'index']
+            );
 
-Route::prefix('withdrawals')->group(function () {
+            Route::get(
+                '/statistics',
+                [TransactionController::class, 'statistics']
+            );
 
-    Route::get(
-        '/',
-        [WithdrawalController::class, 'index']
-    );
+            Route::get(
+                '/{transaction}',
+                [TransactionController::class, 'show']
+            );
 
-    Route::get(
-        '/statistics',
-        [WithdrawalController::class, 'statistics']
-    );
+            Route::post(
+                '/{transaction}/refund',
+                [TransactionController::class, 'refund']
+            );
 
-    Route::get(
-        '/{withdrawal}',
-        [WithdrawalController::class, 'show']
-    );
+            Route::post(
+                '/{transaction}/status',
+                [TransactionController::class, 'updateStatus']
+            );
+        });
 
-    Route::post(
-        '/{withdrawal}/approve',
-        [WithdrawalController::class, 'approve']
-    );
 
-    Route::post(
-        '/{withdrawal}/reject',
-        [WithdrawalController::class, 'reject']
-    );
+        /*
+        |--------------------------------------------------------------------------
+        | KYCs
+        |--------------------------------------------------------------------------
+        */
 
-    Route::post(
-        '/{withdrawal}/cancel',
-        [WithdrawalController::class, 'cancel']
-    );
+        Route::prefix('kycs')->group(function () {
 
-    Route::post(
-        '/{withdrawal}/retry',
-        [WithdrawalController::class, 'retry']
-    );
+            Route::get(
+                '/',
+                [KycController::class, 'index']
+            );
 
-});
-            /*
-|--------------------------------------------------------------------------
-| Transfer Management
-|--------------------------------------------------------------------------
-*/
+            Route::get(
+                '/statistics',
+                [KycController::class, 'statistics']
+            );
 
-Route::prefix('transfers')->group(function () {
+            Route::get(
+                '/{kyc}',
+                [KycController::class, 'show']
+            );
 
-    Route::get(
-        '/',
-        [TransferController::class, 'index']
-    );
+            Route::post(
+                '/{kyc}/approve',
+                [KycController::class, 'approve']
+            );
 
-    Route::get(
-        '/statistics',
-        [TransferController::class, 'statistics']
-    );
+            Route::post(
+                '/{kyc}/reject',
+                [KycController::class, 'reject']
+            );
+        });
 
-    Route::get(
-        '/{transfer}',
-        [TransferController::class, 'show']
-    );
 
-    Route::post(
-        '/{transfer}/approve',
-        [TransferController::class, 'approve']
-    );
+        /*
+        |--------------------------------------------------------------------------
+        | COUNTRIES
+        |--------------------------------------------------------------------------
+        */
 
-    Route::post(
-        '/{transfer}/reject',
-        [TransferController::class, 'reject']
-    );
+        Route::prefix('countries')->group(function () {
 
-    Route::post(
-        '/{transfer}/cancel',
-        [TransferController::class, 'cancel']
-    );
+            Route::get(
+                '/',
+                [CountryController::class, 'index']
+            );
 
-    Route::post(
-        '/{transfer}/retry',
-        [TransferController::class, 'retry']
-    );
+            Route::post(
+                '/',
+                [CountryController::class, 'store']
+            );
 
-});
-/*
-|--------------------------------------------------------------------------
-| Deposit Management
-|--------------------------------------------------------------------------
-*/
+            Route::get(
+                '/{country}',
+                [CountryController::class, 'show']
+            );
 
-Route::prefix('deposits')->group(function () {
+            Route::put(
+                '/{country}',
+                [CountryController::class, 'update']
+            );
 
-    Route::get(
-        '/',
-        [DepositController::class, 'index']
-    );
+            Route::delete(
+                '/{country}',
+                [CountryController::class, 'destroy']
+            );
 
-    Route::get(
-        '/statistics',
-        [DepositController::class, 'statistics']
-    );
+            Route::post(
+                '/{country}/activate',
+                [CountryController::class, 'activate']
+            );
 
-    Route::get(
-        '/{deposit}',
-        [DepositController::class, 'show']
-    );
+            Route::post(
+                '/{country}/deactivate',
+                [CountryController::class, 'deactivate']
+            );
 
-    Route::post(
-        '/{deposit}/approve',
-        [DepositController::class, 'approve']
-    );
+            Route::post(
+                '/{country}/exchange-rate',
+                [CountryController::class, 'updateExchangeRate']
+            );
+        });
 
-    Route::post(
-        '/{deposit}/reject',
-        [DepositController::class, 'reject']
-    );
 
-    Route::post(
-        '/{deposit}/cancel',
-        [DepositController::class, 'cancel']
-    );
-    Route::prefix('admin-wallet')
-    ->controller(AdminWalletController::class)
-    ->group(function () {
+        /*
+        |--------------------------------------------------------------------------
+        | WALLETS
+        |--------------------------------------------------------------------------
+        */
 
-        Route::get('/', 'index');
+        Route::prefix('wallets')->group(function () {
 
-        Route::get('/transactions', 'transactions');
+            Route::get(
+                '/',
+                [WalletController::class, 'index']
+            );
 
-        Route::post('/fund', 'fund');
+            Route::get(
+                '/summary',
+                [WalletController::class, 'summary']
+            );
 
-        Route::put('/{adminWallet}', 'update');
+            Route::get(
+                '/{wallet}',
+                [WalletController::class, 'show']
+            );
+
+            Route::post(
+                '/{wallet}/credit',
+                [WalletController::class, 'credit']
+            );
+
+            Route::post(
+                '/{wallet}/debit',
+                [WalletController::class, 'debit']
+            );
+
+            Route::post(
+                '/{wallet}/freeze',
+                [WalletController::class, 'freeze']
+            );
+
+            Route::post(
+                '/{wallet}/unfreeze',
+                [WalletController::class, 'unfreeze']
+            );
+
+            Route::get(
+                '/{wallet}/statement',
+                [WalletController::class, 'statement']
+            );
+
+            Route::get(
+                '/{wallet}/transactions',
+                [WalletController::class, 'transactions']
+            );
+        });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | NETWORKS
+        |--------------------------------------------------------------------------
+        */
+
+        Route::prefix('networks')->group(function () {
+
+            Route::get(
+                '/',
+                [NetworkController::class, 'index']
+            );
+
+            Route::post(
+                '/',
+                [NetworkController::class, 'store']
+            );
+
+            Route::get(
+                '/{network}',
+                [NetworkController::class, 'show']
+            );
+
+            Route::put(
+                '/{network}',
+                [NetworkController::class, 'update']
+            );
+
+            Route::delete(
+                '/{network}',
+                [NetworkController::class, 'destroy']
+            );
+
+            Route::post(
+                '/{network}/activate',
+                [NetworkController::class, 'activate']
+            );
+
+            Route::post(
+                '/{network}/deactivate',
+                [NetworkController::class, 'deactivate']
+            );
+        });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | DATA BUNDLES
+        |--------------------------------------------------------------------------
+        */
+
+        Route::prefix('data-bundles')->group(function () {
+
+            Route::get(
+                '/',
+                [DataBundleController::class, 'index']
+            );
+
+            Route::post(
+                '/',
+                [DataBundleController::class, 'store']
+            );
+
+            Route::get(
+                '/{dataBundle}',
+                [DataBundleController::class, 'show']
+            );
+
+            Route::put(
+                '/{dataBundle}',
+                [DataBundleController::class, 'update']
+            );
+
+            Route::delete(
+                '/{dataBundle}',
+                [DataBundleController::class, 'destroy']
+            );
+
+            Route::post(
+                '/{dataBundle}/activate',
+                [DataBundleController::class, 'activate']
+            );
+
+            Route::post(
+                '/{dataBundle}/deactivate',
+                [DataBundleController::class, 'deactivate']
+            );
+        });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | OFFICES
+        |--------------------------------------------------------------------------
+        */
+
+        Route::prefix('offices')->group(function () {
+
+            Route::get(
+                '/',
+                [OfficeController::class, 'index']
+            );
+
+            Route::post(
+                '/',
+                [OfficeController::class, 'store']
+            );
+
+            Route::get(
+                '/{office}',
+                [OfficeController::class, 'show']
+            );
+
+            Route::put(
+                '/{office}',
+                [OfficeController::class, 'update']
+            );
+
+            Route::delete(
+                '/{office}',
+                [OfficeController::class, 'destroy']
+            );
+
+            Route::post(
+                '/{office}/activate',
+                [OfficeController::class, 'activate']
+            );
+
+            Route::post(
+                '/{office}/deactivate',
+                [OfficeController::class, 'deactivate']
+            );
+
+            Route::post(
+                '/{office}/head-office',
+                [OfficeController::class, 'makeHeadOffice']
+            );
+        });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | RELOADLY HEALTH
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/reloadly/health',
+            [ReloadlyController::class, 'health']
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | THUNES HEALTH
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/thunes/health',
+            [ThunesController::class, 'health']
+        );
 
     });
-
 });
-            /*
-|--------------------------------------------------------------------------
-| Transaction Management
-|--------------------------------------------------------------------------
-*/
-
-Route::prefix('transactions')->group(function () {
-
-    Route::get(
-        '/',
-        [TransactionController::class, 'index']
-    );
-
-    Route::get(
-        '/statistics',
-        [TransactionController::class, 'statistics']
-    );
-
-    Route::get(
-        '/{transaction}',
-        [TransactionController::class, 'show']
-    );
-
-    Route::post(
-        '/{transaction}/refund',
-        [TransactionController::class, 'refund']
-    );
-
-    Route::post(
-        '/{transaction}/status',
-        [TransactionController::class, 'updateStatus']
-    );
-
-});
-/*
-|--------------------------------------------------------------------------
-| KYC Management
-|--------------------------------------------------------------------------
-*/
-
-Route::prefix('kycs')->group(function () {
-
-    Route::get(
-        '/',
-        [KycController::class, 'index']
-    );
-
-    Route::get(
-        '/statistics',
-        [KycController::class, 'statistics']
-    );
-
-    Route::get(
-        '/{kyc}',
-        [KycController::class, 'show']
-    );
-
-    Route::post(
-        '/{kyc}/approve',
-        [KycController::class, 'approve']
-    );
-
-    Route::post(
-        '/{kyc}/reject',
-        [KycController::class, 'reject']
-    );
-
-});
-            /*
-|--------------------------------------------------------------------------
-| Countries
-|--------------------------------------------------------------------------
-*/
-
-Route::prefix('countries')->group(function () {
-
-    Route::get('/', [CountryController::class, 'index']);
-
-    Route::post('/', [CountryController::class, 'store']);
-
-    Route::get('/{country}', [CountryController::class, 'show']);
-
-    Route::put('/{country}', [CountryController::class, 'update']);
-
-    Route::delete('/{country}', [CountryController::class, 'destroy']);
-
-    Route::post(
-        '/{country}/activate',
-        [CountryController::class, 'activate']
-    );
-
-    Route::post(
-        '/{country}/deactivate',
-        [CountryController::class, 'deactivate']
-    );
-
-    Route::post(
-        '/{country}/exchange-rate',
-        [CountryController::class, 'updateExchangeRate']
-    );
-
-});
-/*
-|--------------------------------------------------------------------------
-| Wallet Management
-|--------------------------------------------------------------------------
-*/
-
-Route::prefix('wallets')->group(function () {
-
-    Route::get(
-        '/',
-        [WalletController::class, 'index']
-    );
-
-    Route::get(
-        '/summary',
-        [WalletController::class, 'summary']
-    );
-
-    Route::get(
-        '/{wallet}',
-        [WalletController::class, 'show']
-    );
-
-    Route::post(
-        '/{wallet}/credit',
-        [WalletController::class, 'credit']
-    );
-
-    Route::post(
-        '/{wallet}/debit',
-        [WalletController::class, 'debit']
-    );
-
-    Route::post(
-        '/{wallet}/freeze',
-        [WalletController::class, 'freeze']
-    );
-
-    Route::post(
-        '/{wallet}/unfreeze',
-        [WalletController::class, 'unfreeze']
-    );
-
-    Route::get(
-        '/{wallet}/statement',
-        [WalletController::class, 'statement']
-    );
-
-    Route::get(
-        '/{wallet}/transactions',
-        [WalletController::class, 'transactions']
-    );
-
-});
-/*
-|--------------------------------------------------------------------------
-| Networks
-|--------------------------------------------------------------------------
-*/
-
-Route::prefix('networks')->group(function () {
-
-    Route::get(
-        '/',
-        [NetworkController::class, 'index']
-    );
-
-    Route::post(
-        '/',
-        [NetworkController::class, 'store']
-    );
-
-    Route::get(
-        '/{network}',
-        [NetworkController::class, 'show']
-    );
-
-    Route::put(
-        '/{network}',
-        [NetworkController::class, 'update']
-    );
-
-    Route::delete(
-        '/{network}',
-        [NetworkController::class, 'destroy']
-    );
-
-    Route::post(
-        '/{network}/activate',
-        [NetworkController::class, 'activate']
-    );
-
-    Route::post(
-        '/{network}/deactivate',
-        [NetworkController::class, 'deactivate']
-    );
-
-});
-       /*
-|--------------------------------------------------------------------------
-| Data Bundles
-|--------------------------------------------------------------------------
-*/
-
-Route::prefix('data-bundles')->group(function () {
-
-    Route::get(
-        '/',
-        [DataBundleController::class, 'index']
-    );
-
-    Route::post(
-        '/',
-        [DataBundleController::class, 'store']
-    );
-
-    Route::get(
-        '/{dataBundle}',
-        [DataBundleController::class, 'show']
-    );
-
-    Route::put(
-        '/{dataBundle}',
-        [DataBundleController::class, 'update']
-    );
-
-    Route::delete(
-        '/{dataBundle}',
-        [DataBundleController::class, 'destroy']
-    );
-
-    Route::post(
-        '/{dataBundle}/activate',
-        [DataBundleController::class, 'activate']
-    );
-
-    Route::post(
-        '/{dataBundle}/deactivate',
-        [DataBundleController::class, 'deactivate']
-    );
-
-});
-
-
-Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
-
-    Route::get(
-        '/reloadly/health',
-        [ReloadlyController::class, 'health']
-    );
-
-});
-
-Route::get(
-    '/admin/thunes/health',
-    [ThunesController::class, 'health']
-);
-/*
-|--------------------------------------------------------------------------
-| Offices
-|--------------------------------------------------------------------------
-*/
-
-Route::prefix('offices')->group(function () {
-
-    Route::get(
-        '/',
-        [OfficeController::class, 'index']
-    );
-
-    Route::post(
-        '/',
-        [OfficeController::class, 'store']
-    );
-
-    Route::get(
-        '/{office}',
-        [OfficeController::class, 'show']
-    );
-
-    Route::put(
-        '/{office}',
-        [OfficeController::class, 'update']
-    );
-
-    Route::delete(
-        '/{office}',
-        [OfficeController::class, 'destroy']
-    );
-
-    Route::post(
-        '/{office}/activate',
-        [OfficeController::class, 'activate']
-    );
-
-    Route::post(
-        '/{office}/deactivate',
-        [OfficeController::class, 'deactivate']
-    );
-
-    Route::post(
-        '/{office}/head-office',
-        [OfficeController::class, 'makeHeadOffice']
-    );
-
-});
-});
- });
