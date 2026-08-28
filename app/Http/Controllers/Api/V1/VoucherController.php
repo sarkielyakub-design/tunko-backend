@@ -166,283 +166,112 @@ class VoucherController extends Controller
             ], 500);
         }
     }
-
-/*
-|--------------------------------------------------------------------------
-| CHECK AVAILABILITY
-|--------------------------------------------------------------------------
-*/
-
 public function availability(Request $request)
 {
     $request->validate([
-
-        'type' => [
-            'required',
-            'in:airtime,data',
-        ],
-
-        'country_code' => [
-            'required',
-            'string',
-            'size:2',
-        ],
-
-        'amount' => [
-            'required',
-            'numeric',
-            'min:0.01',
-        ],
-
-        'network_id' => [
-            'nullable',
-            'integer',
-        ],
-
-        'product_name' => [
-            'nullable',
-            'string',
-        ],
-
+        'type' => ['required', 'in:airtime,data'],
+        'country_code' => ['required', 'string', 'size:2'],
+        'amount' => ['required', 'numeric', 'min:0.01'],
     ]);
 
     try {
+        $countryCode = strtoupper($request->country_code);
+        $type = strtolower($request->type);
+        $amount = (float) $request->amount;
 
-        $countryCode = strtoupper(
-            $request->country_code
-        );
-
-        $type = strtolower(
-            $request->type
-        );
-
-        /*
-        |--------------------------------------------------------------------------
-        | Niger / Chad only
-        |--------------------------------------------------------------------------
-        */
-
-        if (!in_array(
-            $countryCode,
-            ['NE', 'TD'],
-            true
-        )) {
+        if (!in_array($countryCode, ['NE', 'TD'], true)) {
             return response()->json([
-
                 'success' => false,
-
                 'message' =>
                     'Voucher service is available only for Niger and Chad.',
-
             ], 422);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Find available inventory
-        |--------------------------------------------------------------------------
-        */
-
         $query = Voucher::query()
-
-            ->where(
-                'status',
-                'available'
-            )
-
-            ->where(
-                'type',
-                $type
-            )
-
-            ->where(
-                'country_code',
-                $countryCode
-            )
-
-            ->where(
-                'amount',
-                $request->amount
-            )
-
+            ->where('status', 'available')
+            ->where('type', $type)
+            ->where('country_code', $countryCode)
+            ->where('amount', $amount)
             ->where(function ($q) {
-
-                $q->whereNull(
-                    'expires_at'
-                )
-
-                ->orWhere(
-                    'expires_at',
-                    '>',
-                    now()
-                );
-
+                $q->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
             });
 
         /*
         |--------------------------------------------------------------------------
-        | Optional network filter
+        | Group inventory by network/product
         |--------------------------------------------------------------------------
-        */
-
-        if ($request->filled('network_id')) {
-
-            $query->where(
-                'network_id',
-                $request->network_id
-            );
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Optional product filter
-        |--------------------------------------------------------------------------
-        */
-
-        if ($request->filled('product_name')) {
-
-            $query->where(
-                'product_name',
-                $request->product_name
-            );
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Load voucher inventory
-        |--------------------------------------------------------------------------
-        |
-        | IMPORTANT:
-        | Do not return the actual voucher PIN here.
-        |
         */
 
         $vouchers = $query
             ->select([
-                'id',
-                'country_code',
-                'type',
                 'network_id',
                 'network_name',
                 'product_name',
                 'amount',
                 'currency',
             ])
-            ->orderBy(
-                'network_name'
-            )
+            ->selectRaw('COUNT(*) as quantity')
+            ->groupBy([
+                'network_id',
+                'network_name',
+                'product_name',
+                'amount',
+                'currency',
+            ])
+            ->orderBy('network_name')
             ->get();
 
-        /*
-        |--------------------------------------------------------------------------
-        | Group inventory by network/product
-        |--------------------------------------------------------------------------
-        |
-        | Example:
-        |
-        | Moov 1000 XOF → quantity 1
-        | Orange 1000 XOF → quantity 3
-        |
-        */
-
-        $products = $vouchers
-            ->groupBy(function ($voucher) {
-
-                return implode('|', [
-                    $voucher->network_id ?? 'null',
-                    strtolower(
-                        trim(
-                            $voucher->network_name ?? ''
-                        )
-                    ),
-                    strtolower(
-                        trim(
-                            $voucher->product_name ?? ''
-                        )
-                    ),
-                    $voucher->amount,
-                    $voucher->currency,
-                ]);
-
-            })
-            ->map(function ($group) {
-
-                $voucher = $group->first();
-
-                return [
-
-                    'available' => true,
-
-                    'quantity' =>
-                        $group->count(),
-
-                    'id' =>
-                        $voucher->id,
-
-                    'country_code' =>
-                        $voucher->country_code,
-
-                    'type' =>
-                        $voucher->type,
-
-                    'network_id' =>
-                        $voucher->network_id,
-
-                    'network_name' =>
-                        $voucher->network_name,
-
-                    'product_name' =>
-                        $voucher->product_name,
-
-                    'amount' =>
-                        (float) $voucher->amount,
-
-                    'currency' =>
-                        $voucher->currency,
-
-                ];
-
-            })
-            ->values();
-
-        /*
-        |--------------------------------------------------------------------------
-        | Response
-        |--------------------------------------------------------------------------
-        */
-
         return response()->json([
-
             'success' => true,
 
+            'message' =>
+                'Voucher availability loaded successfully.',
+
             'data' => [
+                'available' => $vouchers->isNotEmpty(),
 
-                'available' =>
-                    $products->isNotEmpty(),
+                'quantity' => (int) $vouchers->sum(
+                    fn ($voucher) => $voucher->quantity
+                ),
 
-                'quantity' =>
-                    $vouchers->count(),
+                'networks' => $vouchers->map(
+                    function ($voucher) {
+                        return [
+                            'network_id' =>
+                                $voucher->network_id,
 
-                'products' =>
-                    $products,
+                            'network_name' =>
+                                $voucher->network_name,
 
+                            'product_name' =>
+                                $voucher->product_name,
+
+                            'amount' =>
+                                (float) $voucher->amount,
+
+                            'currency' =>
+                                $voucher->currency,
+
+                            'quantity' =>
+                                (int) $voucher->quantity,
+
+                            'is_available' =>
+                                ((int) $voucher->quantity) > 0,
+                        ];
+                    }
+                )->values(),
             ],
-
         ]);
 
     } catch (Throwable $e) {
 
         return response()->json([
-
             'success' => false,
-
-            'message' =>
-                $e->getMessage(),
-
+            'message' => $e->getMessage(),
         ], 500);
     }
-}
-    /*
+}    /*
     |--------------------------------------------------------------------------
     | PURCHASE
     |--------------------------------------------------------------------------
