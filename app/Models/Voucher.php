@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Builder;
 
 class Voucher extends Model
 {
@@ -46,16 +47,12 @@ class Voucher extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(
-            User::class
-        );
+        return $this->belongsTo(User::class);
     }
 
     public function network(): BelongsTo
     {
-        return $this->belongsTo(
-            Network::class
-        );
+        return $this->belongsTo(Network::class);
     }
 
     /*
@@ -64,36 +61,81 @@ class Voucher extends Model
     |--------------------------------------------------------------------------
     */
 
-    public function scopeAvailable($query)
+    public function scopeAvailable(Builder $query): Builder
     {
+        return $query->where('status', 'available');
+    }
+
+    public function scopeSold(Builder $query): Builder
+    {
+        return $query->where('status', 'sold');
+    }
+
+    public function scopeAirtime(Builder $query): Builder
+    {
+        return $query->where('type', 'airtime');
+    }
+
+    public function scopeData(Builder $query): Builder
+    {
+        return $query->where('type', 'data');
+    }
+
+    public function scopeForCountry(
+        Builder $query,
+        string $countryCode
+    ): Builder {
         return $query->where(
-            'status',
-            'available'
+            'country_code',
+            strtoupper($countryCode)
         );
     }
 
-    public function scopeSold($query)
-    {
+    public function scopeForAmount(
+        Builder $query,
+        float $amount
+    ): Builder {
         return $query->where(
-            'status',
-            'sold'
+            'amount',
+            $amount
         );
     }
 
-    public function scopeAirtime($query)
-    {
+    public function scopeForType(
+        Builder $query,
+        string $type
+    ): Builder {
         return $query->where(
             'type',
-            'airtime'
+            strtolower($type)
         );
     }
 
-    public function scopeData($query)
+    public function scopeNotExpired(Builder $query): Builder
     {
-        return $query->where(
-            'type',
-            'data'
-        );
+        return $query->where(function (Builder $query) {
+            $query
+                ->whereNull('expires_at')
+                ->orWhere(
+                    'expires_at',
+                    '>',
+                    now()
+                );
+        });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Availability Query
+    |--------------------------------------------------------------------------
+    */
+
+    public function scopeCurrentlyAvailable(
+        Builder $query
+    ): Builder {
+        return $query
+            ->available()
+            ->notExpired();
     }
 
     /*
@@ -104,11 +146,39 @@ class Voucher extends Model
 
     public function isAvailable(): bool
     {
-        return $this->status === 'available';
+        return $this->status === 'available'
+            && (
+                is_null($this->expires_at)
+                || $this->expires_at->isFuture()
+            );
     }
 
     public function isSold(): bool
     {
         return $this->status === 'sold';
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->expires_at !== null
+            && $this->expires_at->isPast();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Mark Voucher as Sold
+    |--------------------------------------------------------------------------
+    */
+
+    public function markAsSold(
+        ?int $userId = null,
+        ?string $purchaseReference = null
+    ): bool {
+        return $this->update([
+            'status' => 'sold',
+            'user_id' => $userId,
+            'purchase_reference' => $purchaseReference,
+            'sold_at' => now(),
+        ]);
     }
 }
