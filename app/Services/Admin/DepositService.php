@@ -1,0 +1,336 @@
+<?php
+
+namespace App\Services\Admin;
+use App\Models\AdminWallet;
+use App\Models\AdminWalletTransaction;
+use Illuminate\Support\Str;
+use App\Models\Deposit;
+use App\Models\Wallet;
+use App\Models\Transaction;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
+class DepositService
+{
+    /**
+     * Deposit List
+     */
+    public function index(array $filters)
+    {
+        return Deposit::query()
+
+            ->with([
+                'user',
+                'wallet',
+            ])
+
+            ->when(
+                $filters['search'] ?? null,
+                function ($query, $search) {
+
+                    $query->where(function ($q) use ($search) {
+
+                        $q->where('reference', 'like', "%{$search}%")
+
+                            ->orWhere(
+                                'gateway_reference',
+                                'like',
+                                "%{$search}%"
+                            )
+
+                            ->orWhereHas('user', function ($user) use ($search) {
+
+                                $user->where('first_name', 'like', "%{$search}%")
+                                    ->orWhere('last_name', 'like', "%{$search}%")
+                                    ->orWhere('email', 'like', "%{$search}%")
+                                    ->orWhere('phone', 'like', "%{$search}%");
+
+                            });
+
+                    });
+
+                }
+            )
+
+            ->when(
+                $filters['status'] ?? null,
+                fn($q, $status) => $q->where('status', $status)
+            )
+
+            ->when(
+                $filters['gateway'] ?? null,
+                fn($q, $gateway) => $q->where('gateway', $gateway)
+            )
+
+            ->when(
+                $filters['payment_method'] ?? null,
+                fn($q, $method) => $q->where('payment_method', $method)
+            )
+
+            ->when(
+                $filters['currency'] ?? null,
+                fn($q, $currency) => $q->where('currency', $currency)
+            )
+
+            ->when(
+                $filters['user_id'] ?? null,
+                fn($q, $user) => $q->where('user_id', $user)
+            )
+
+            ->when(
+                $filters['min_amount'] ?? null,
+                fn($q, $amount) => $q->where('amount', '>=', $amount)
+            )
+
+            ->when(
+                $filters['max_amount'] ?? null,
+                fn($q, $amount) => $q->where('amount', '<=', $amount)
+            )
+
+            ->latest()
+
+            ->paginate(
+                $filters['per_page'] ?? 20
+            );
+    }
+
+    /**
+     * Show Deposit
+     */
+    public function show(Deposit $deposit): Deposit
+    {
+        return $deposit->load([
+            'user',
+            'wallet',
+        ]);
+    }
+
+    /**
+     * Approve Deposit
+     */
+    public function approve(
+        Deposit $deposit,
+        array $data
+    ): Deposit {
+
+        return DB::transaction(function () use (
+            $deposit,
+            $data
+        ) {
+
+            if ($deposit->status !== 'pending') {
+
+                throw new \Exception(
+                    'Only pending deposits can be approved.'
+                );
+
+            }
+
+            $adminWallet = AdminWallet::active()
+    ->lockForUpdate()
+    ->first();
+
+if (!$adminWallet) {
+    throw new \Exception('No active admin wallet found.');
+}
+
+if (!$adminWallet->hasSufficientBalance($deposit->amount)) {
+    throw new \Exception('Insufficient admin wallet balance.');
+}
+
+$deposit->refresh();
+
+$userWallet = Wallet::lockForUpdate()->find($deposit->wallet_id);
+
+if (!$userWallet) {
+    throw new \Exception(
+        'User wallet not found. wallet_id=' . ($deposit->wallet_id ?? 'NULL')
+    );
+}
+
+
+$after = $adminWallet->fresh()->balance;
+$before = $adminWallet->balance;
+
+$adminWallet->debit($deposit->amount);
+AdminWalletTransaction::create([
+
+    'admin_wallet_id' => $adminWallet->id,
+
+    'reference' => 'AWT-'.Str::upper(Str::random(12)),
+
+    'type' => 'debit',
+
+    'amount' => $deposit->amount,
+
+    'balance_before' => $before,
+
+    'balance_after' => $after,
+
+    'currency' => $deposit->currency,
+
+    'source' => 'manual_deposit',
+
+    'description' => 'Manual deposit approved',
+
+    'created_by' => Auth::guard('admin')->id(),
+
+]);
+
+
+$userWallet->increment(
+    'balance',
+    $deposit->amount
+);
+            Transaction::create([
+
+    'user_id' => $deposit->user_id,
+
+    'reference' => $deposit->reference,
+
+    'type' => 'deposit',
+
+    'amount' => $deposit->amount,
+
+    'fee' => $deposit->fee,
+
+    'total' => $deposit->amount,
+
+    'status' => 'completed',
+
+    'description' => 'Manual Wallet Deposit',
+
+    'meta' => [
+        'gateway' => 'manual',
+        'payment_method' => $deposit->payment_method,
+        'wallet_id' => $userWallet->id,
+    ],
+
+]);
+          $deposit->update([
+
+    'status' => 'completed',
+
+    // Manual deposit defaults
+    'gateway_reference' => $deposit->reference,
+
+    'provider_status' => 'approved',
+
+    'provider_response' => 'Approved manually by administrator',
+
+    'approved_by' => Auth::guard('admin')->id(),
+
+    'approved_at' => now(),
+
+    'completed_at' => now(),
+
+    'admin_note' => $data['note'] ?? null,
+
+]);
+
+            return $deposit->fresh()->load([
+                'user',
+                'wallet',
+            ]); 
+
+        });
+
+    }
+
+    /**
+     * Reject Deposit
+     */
+    public function reject(
+        Deposit $deposit,
+        array $data
+    ): Deposit {
+
+        $deposit->update([
+
+            'status' => 'rejected',
+
+            'reject_reason' => $data['reason'],
+
+            'reject_code' => $data['reject_code'],
+
+            'provider_response' => $data['provider_response'] ?? null,
+
+            'admin_note' => $data['note'] ?? null,
+
+        ]);
+
+        return $deposit->fresh()->load([
+            'user',
+            'wallet',
+        ]);
+    }
+
+    /**
+     * Cancel Deposit
+     */
+    public function cancel(
+        Deposit $deposit,
+        array $data
+    ): Deposit {
+
+        $deposit->update([
+
+            'status' => 'cancelled',
+
+            'cancel_reason' => $data['reason'],
+
+            'cancel_code' => $data['cancel_code'],
+
+            'cancelled_at' => now(),
+
+            'admin_note' => $data['note'] ?? null,
+
+        ]);
+
+        return $deposit->fresh()->load([
+            'user',
+            'wallet',
+        ]);
+    }
+
+    /**
+     * Statistics
+     */
+    public function statistics(): array
+    {
+        return [
+
+            'total_deposits' => Deposit::count(),
+
+            'pending' => Deposit::where(
+                'status',
+                'pending'
+            )->count(),
+
+            'completed' => Deposit::where(
+                'status',
+                'completed'
+            )->count(),
+
+            'failed' => Deposit::where(
+                'status',
+                'failed'
+            )->count(),
+
+            'cancelled' => Deposit::where(
+                'status',
+                'cancelled'
+            )->count(),
+
+            'total_volume' => Deposit::sum(
+                'amount'
+            ),
+
+            'today_volume' => Deposit::whereDate(
+                'created_at',
+                today()
+            )->sum('amount'),
+
+        ];
+    }
+}
