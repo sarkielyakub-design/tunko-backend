@@ -3,63 +3,72 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\TransactionResource;
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 
 class TransactionController extends Controller
 {
-   public function index(Request $request)
-{
-    $transactions = $request->user()
-        ->transactions()
-        ->latest()
-        ->take(10)
-        ->get();
+    /**
+     * Get authenticated user's recent transactions.
+     */
+    public function index(Request $request)
+    {
+        $transactions = $request->user()
+            ->transactions()
+            ->latest()
+            ->take(10)
+            ->get();
 
-    return response()->json([
-        'success' => true,
-        'transactions' => $transactions,
-    ]);
-}
-public function receipt($reference)
-{
-    $transaction = Transaction::where(
-        'reference',
-        $reference
-    )->firstOrFail();
+        return response()->json([
+            'success' => true,
+            'transactions' => $transactions,
+        ]);
+    }
 
-    return response()->json([
-        'success' => true,
+    /**
+     * Get transaction receipt data.
+     */
+    public function receipt(string $reference)
+    {
+        $transaction = Transaction::with([
+            'user.wallet',
+        ])
+            ->where('reference', $reference)
+            ->firstOrFail();
 
-        'data' => [
+        return response()->json([
+            'success' => true,
 
-            'reference' => $transaction->reference,
+            'data' => [
+                'reference' => $transaction->reference,
 
-            'amount' => $transaction->amount,
+                'amount' => $transaction->amount,
 
-            'status' => $transaction->status,
+                'status' => $transaction->status,
 
-            'type' => $transaction->type,
+                'type' => $transaction->type,
 
-            'payment_method' => $transaction->payment_method,
+                'payment_method' =>
+                    $transaction->payment_method,
 
-            'date' => $transaction->created_at,
+                'date' => $transaction->created_at,
 
-            'description' => $transaction->description,
+                'description' =>
+                    $transaction->description,
 
-            'currency' => 'NGN',
+                'currency' => 'NGN',
 
-            'wallet_number' => $transaction
-                ->user
-                ->wallet
-                ->wallet_number,
+                'wallet_number' =>
+                    $transaction->user?->wallet?->wallet_number,
 
-            'user' => [
-                'name' => $transaction->user->full_name,
-                'email' => $transaction->user->email,
+                'user' => [
+                    'name' =>
+                        $transaction->user?->full_name,
+
+                    'email' =>
+                        $transaction->user?->email,
+                ],
             ],
-        ],
-    ]);
-}
-    
+        ]);
+    }
 }
