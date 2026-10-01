@@ -26,47 +26,44 @@ class TransactionController extends Controller
     }
 
     /**
-     * Get transaction receipt data.
+     * Get authenticated user's transaction receipt.
      */
-    public function receipt(string $reference)
+    public function receipt(Request $request, string $reference)
     {
-        $transaction = Transaction::with([
-            'user.wallet',
-        ])
+        $transaction = $request->user()
+            ->transactions()
+            ->with('user.wallet')
             ->where('reference', $reference)
-            ->firstOrFail();
+            ->first();
+
+        if (!$transaction) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Transaction receipt not found.',
+            ], 404);
+        }
 
         return response()->json([
             'success' => true,
-
+            'message' => 'Transaction receipt loaded successfully.',
             'data' => [
                 'reference' => $transaction->reference,
-
                 'amount' => $transaction->amount,
-
                 'status' => $transaction->status,
-
                 'type' => $transaction->type,
-
-                'payment_method' =>
-                    $transaction->payment_method,
-
+                'payment_method' => $transaction->payment_method,
                 'date' => $transaction->created_at,
+                'description' => $transaction->description,
 
-                'description' =>
-                    $transaction->description,
-
-                'currency' => 'NGN',
+                // Use the transaction currency if available.
+                'currency' => $transaction->currency ?? 'NGN',
 
                 'wallet_number' =>
                     $transaction->user?->wallet?->wallet_number,
 
                 'user' => [
-                    'name' =>
-                        $transaction->user?->full_name,
-
-                    'email' =>
-                        $transaction->user?->email,
+                    'name' => $transaction->user?->full_name,
+                    'email' => $transaction->user?->email,
                 ],
             ],
         ]);
