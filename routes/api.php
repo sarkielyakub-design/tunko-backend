@@ -19,9 +19,11 @@ use App\Http\Controllers\Api\V1\TransactionController;
 use App\Http\Controllers\Api\V1\TransferController;
 use App\Http\Controllers\Api\V1\WalletTransferController;
 use App\Http\Controllers\Api\V1\OfficeTransferController;
+
 use App\Http\Controllers\Office\AuthController as OfficeAuthController;
 use App\Http\Controllers\Office\DashboardController as OfficeDashboardController;
 use App\Http\Controllers\Office\TransferController as OfficeTransferControllerForStaff;
+
 use App\Http\Controllers\Api\V1\BeneficiaryController;
 use App\Http\Controllers\Api\V1\DataController;
 use App\Http\Controllers\Api\V1\AirtimeController;
@@ -33,7 +35,15 @@ use App\Http\Controllers\Api\V1\PasswordController;
 use App\Http\Controllers\Api\V1\PinController;
 use App\Http\Controllers\Api\V1\VoucherController;
 
+
+/*
+|--------------------------------------------------------------------------
+| Admin Routes
+|--------------------------------------------------------------------------
+*/
+
 require __DIR__.'/api/admin.php';
+
 
 /*
 |--------------------------------------------------------------------------
@@ -42,13 +52,12 @@ require __DIR__.'/api/admin.php';
 */
 
 Route::get('/test', function () {
-
     return response()->json([
         'success' => true,
         'message' => 'Tunko API is working',
     ]);
-
 });
+
 
 /*
 |--------------------------------------------------------------------------
@@ -56,20 +65,58 @@ Route::get('/test', function () {
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('v1/office')->group(function () {
-    Route::post('/login', [OfficeAuthController::class, 'login']);
-
-    Route::middleware(['auth:sanctum', 'office.staff'])->group(function () {
-        Route::post('/logout', [OfficeAuthController::class, 'logout']);
-        Route::get('/profile', [OfficeAuthController::class, 'profile']);
-        Route::get('/dashboard', [OfficeDashboardController::class, 'index']);
-        Route::get('/transfers', [OfficeTransferControllerForStaff::class, 'index']);
-        Route::get('/transfers/{officeTransfer}', [OfficeTransferControllerForStaff::class, 'show']);
-        Route::patch('/transfers/{officeTransfer}/status', [OfficeTransferControllerForStaff::class, 'updateStatus']);
-    });
-});
-
 Route::prefix('v1')->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Office Authentication
+    |--------------------------------------------------------------------------
+    */
+
+    Route::prefix('office')->group(function () {
+
+        Route::post('/login', [
+            OfficeAuthController::class,
+            'login',
+        ]);
+
+        Route::middleware([
+            'auth:sanctum',
+            'office.staff',
+        ])->group(function () {
+
+            Route::post('/logout', [
+                OfficeAuthController::class,
+                'logout',
+            ]);
+
+            Route::get('/profile', [
+                OfficeAuthController::class,
+                'profile',
+            ]);
+
+            Route::get('/dashboard', [
+                OfficeDashboardController::class,
+                'index',
+            ]);
+
+            Route::get('/transfers', [
+                OfficeTransferControllerForStaff::class,
+                'index',
+            ]);
+
+            Route::get('/transfers/{officeTransfer}', [
+                OfficeTransferControllerForStaff::class,
+                'show',
+            ]);
+
+            Route::patch('/transfers/{officeTransfer}/status', [
+                OfficeTransferControllerForStaff::class,
+                'updateStatus',
+            ]);
+        });
+    });
+
 
     /*
     |--------------------------------------------------------------------------
@@ -97,6 +144,7 @@ Route::prefix('v1')->group(function () {
         'reset',
     ]);
 
+
     /*
     |--------------------------------------------------------------------------
     | Protected Routes
@@ -121,6 +169,7 @@ Route::prefix('v1')->group(function () {
             'logout',
         ]);
 
+
         /*
         |--------------------------------------------------------------------------
         | Dashboard
@@ -131,6 +180,7 @@ Route::prefix('v1')->group(function () {
             DashboardController::class,
             'index',
         ]);
+
 
         /*
         |--------------------------------------------------------------------------
@@ -147,6 +197,7 @@ Route::prefix('v1')->group(function () {
             ProfileController::class,
             'update',
         ]);
+
 
         /*
         |--------------------------------------------------------------------------
@@ -177,6 +228,7 @@ Route::prefix('v1')->group(function () {
                 'summary',
             ]);
 
+
             /*
             |--------------------------------------------------------------------------
             | Wallet Operations
@@ -198,6 +250,7 @@ Route::prefix('v1')->group(function () {
                 'transfer',
             ]);
 
+
             /*
             |--------------------------------------------------------------------------
             | Manual Deposit
@@ -208,6 +261,7 @@ Route::prefix('v1')->group(function () {
                 WalletDepositController::class,
                 'requestDeposit',
             ]);
+
 
             /*
             |--------------------------------------------------------------------------
@@ -224,8 +278,8 @@ Route::prefix('v1')->group(function () {
                 CinetPayController::class,
                 'verify',
             ]);
-
         });
+
 
         /*
         |--------------------------------------------------------------------------
@@ -240,6 +294,7 @@ Route::prefix('v1')->group(function () {
             CinetPayController::class,
             'webhook',
         ]);
+
 
         /*
         |--------------------------------------------------------------------------
@@ -272,8 +327,8 @@ Route::prefix('v1')->group(function () {
                 'status' => $response->status(),
                 'body' => $response->json(),
             ]);
-
         });
+
 
         /*
         |--------------------------------------------------------------------------
@@ -292,8 +347,8 @@ Route::prefix('v1')->group(function () {
                 TransactionController::class,
                 'receipt',
             ]);
-
         });
+
 
         /*
         |--------------------------------------------------------------------------
@@ -314,6 +369,7 @@ Route::prefix('v1')->group(function () {
                 'countries',
             ]);
 
+
             /*
             |--------------------------------------------------------------------------
             | Networks
@@ -324,6 +380,7 @@ Route::prefix('v1')->group(function () {
                 DataController::class,
                 'networks',
             ]);
+
 
             /*
             |--------------------------------------------------------------------------
@@ -336,6 +393,7 @@ Route::prefix('v1')->group(function () {
                 'bundles',
             ]);
 
+
             /*
             |--------------------------------------------------------------------------
             | Quote
@@ -346,6 +404,7 @@ Route::prefix('v1')->group(function () {
                 DataController::class,
                 'quote',
             ]);
+
 
             /*
             |--------------------------------------------------------------------------
@@ -358,6 +417,7 @@ Route::prefix('v1')->group(function () {
                 'purchase',
             ]);
 
+
             /*
             |--------------------------------------------------------------------------
             | History
@@ -368,6 +428,7 @@ Route::prefix('v1')->group(function () {
                 DataController::class,
                 'history',
             ]);
+
 
             /*
             |--------------------------------------------------------------------------
@@ -380,6 +441,7 @@ Route::prefix('v1')->group(function () {
                 'receipt',
             ]);
 
+
             /*
             |--------------------------------------------------------------------------
             | Beneficiaries
@@ -390,8 +452,8 @@ Route::prefix('v1')->group(function () {
                 DataController::class,
                 'beneficiaries',
             ]);
-
         });
+
 
         /*
         |--------------------------------------------------------------------------
@@ -440,8 +502,8 @@ Route::prefix('v1')->group(function () {
                 TransferController::class,
                 'receipt',
             ]);
-
         });
+
 
         /*
         |--------------------------------------------------------------------------
@@ -462,6 +524,7 @@ Route::prefix('v1')->group(function () {
                 'verify',
             ]);
 
+
             /*
             |--------------------------------------------------------------------------
             | Quote
@@ -472,6 +535,7 @@ Route::prefix('v1')->group(function () {
                 WalletTransferController::class,
                 'quote',
             ]);
+
 
             /*
             |--------------------------------------------------------------------------
@@ -484,6 +548,7 @@ Route::prefix('v1')->group(function () {
                 'send',
             ]);
 
+
             /*
             |--------------------------------------------------------------------------
             | History
@@ -494,6 +559,7 @@ Route::prefix('v1')->group(function () {
                 WalletTransferController::class,
                 'history',
             ]);
+
 
             /*
             |--------------------------------------------------------------------------
@@ -506,6 +572,7 @@ Route::prefix('v1')->group(function () {
                 'receipt',
             ]);
 
+
             /*
             |--------------------------------------------------------------------------
             | Beneficiaries
@@ -516,8 +583,8 @@ Route::prefix('v1')->group(function () {
                 WalletTransferController::class,
                 'beneficiaries',
             ]);
-
         });
+
 
         /*
         |--------------------------------------------------------------------------
@@ -541,6 +608,7 @@ Route::prefix('v1')->group(function () {
                 'quote',
             ]);
 
+
             /*
             |--------------------------------------------------------------------------
             | Send
@@ -552,6 +620,7 @@ Route::prefix('v1')->group(function () {
                 'send',
             ]);
 
+
             /*
             |--------------------------------------------------------------------------
             | History
@@ -562,10 +631,19 @@ Route::prefix('v1')->group(function () {
                 OfficeTransferController::class,
                 'history',
             ]);
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Destinations
+            |--------------------------------------------------------------------------
+            */
+
             Route::get('/destinations', [
-    OfficeTransferController::class,
-    'destinations',
-]);
+                OfficeTransferController::class,
+                'destinations',
+            ]);
+
 
             /*
             |--------------------------------------------------------------------------
@@ -577,8 +655,8 @@ Route::prefix('v1')->group(function () {
                 OfficeTransferController::class,
                 'receipt',
             ]);
-
         });
+
 
         /*
         |--------------------------------------------------------------------------
@@ -607,8 +685,8 @@ Route::prefix('v1')->group(function () {
                 BeneficiaryController::class,
                 'destroy',
             ]);
-
         });
+
 
         /*
         |--------------------------------------------------------------------------
@@ -618,17 +696,46 @@ Route::prefix('v1')->group(function () {
 
         Route::prefix('kyc')->group(function () {
 
+            /*
+            |--------------------------------------------------------------------------
+            | Submit Personal KYC Information
+            |--------------------------------------------------------------------------
+            */
+
             Route::post('/submit', [
                 KycController::class,
                 'submit',
             ]);
 
+
+            /*
+            |--------------------------------------------------------------------------
+            | Final KYC Submission
+            |--------------------------------------------------------------------------
+            |
+            | Called after the user has completed the KYC
+            | flow and confirms the review page.
+            |
+            */
+
+            Route::post('/final-submit', [
+                KycController::class,
+                'finalSubmit',
+            ]);
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | KYC Status
+            |--------------------------------------------------------------------------
+            */
+
             Route::get('/status', [
                 KycController::class,
                 'status',
             ]);
-
         });
+
 
         /*
         |--------------------------------------------------------------------------
@@ -657,8 +764,8 @@ Route::prefix('v1')->group(function () {
                 PinController::class,
                 'reset',
             ]);
-
         });
+
 
         /*
         |--------------------------------------------------------------------------
@@ -677,8 +784,8 @@ Route::prefix('v1')->group(function () {
                 OtpController::class,
                 'verify',
             ]);
-
         });
+
 
         /*
         |--------------------------------------------------------------------------
@@ -692,8 +799,8 @@ Route::prefix('v1')->group(function () {
                 PasswordController::class,
                 'change',
             ]);
-
         });
+
 
         /*
         |--------------------------------------------------------------------------
@@ -727,8 +834,8 @@ Route::prefix('v1')->group(function () {
                 CardController::class,
                 'freeze',
             ]);
-
         });
+
 
         /*
         |--------------------------------------------------------------------------
@@ -749,6 +856,7 @@ Route::prefix('v1')->group(function () {
                 'countries',
             ]);
 
+
             /*
             |--------------------------------------------------------------------------
             | Networks
@@ -759,6 +867,7 @@ Route::prefix('v1')->group(function () {
                 AirtimeController::class,
                 'networks',
             ]);
+
 
             /*
             |--------------------------------------------------------------------------
@@ -771,6 +880,7 @@ Route::prefix('v1')->group(function () {
                 'products',
             ]);
 
+
             /*
             |--------------------------------------------------------------------------
             | Quote
@@ -781,6 +891,7 @@ Route::prefix('v1')->group(function () {
                 AirtimeController::class,
                 'quote',
             ]);
+
 
             /*
             |--------------------------------------------------------------------------
@@ -793,6 +904,7 @@ Route::prefix('v1')->group(function () {
                 'purchase',
             ]);
 
+
             /*
             |--------------------------------------------------------------------------
             | History
@@ -803,6 +915,7 @@ Route::prefix('v1')->group(function () {
                 AirtimeController::class,
                 'history',
             ]);
+
 
             /*
             |--------------------------------------------------------------------------
@@ -815,6 +928,7 @@ Route::prefix('v1')->group(function () {
                 'receipt',
             ]);
 
+
             /*
             |--------------------------------------------------------------------------
             | Beneficiaries
@@ -825,91 +939,9 @@ Route::prefix('v1')->group(function () {
                 AirtimeController::class,
                 'beneficiaries',
             ]);
-
         });
-/*
-|--------------------------------------------------------------------------
-| Vouchers
-|--------------------------------------------------------------------------
-|
-| Physical airtime/data cards purchased by Tunko
-| and sold to customers.
-|
-*/
 
-Route::prefix('vouchers')->group(function () {
 
-    /*
-    |--------------------------------------------------------------------------
-    | Available Voucher Products
-    |--------------------------------------------------------------------------
-    |
-    | Returns only products that have available
-    | physical vouchers in inventory.
-    |
-    */
-
-    Route::get('/products', [
-        VoucherController::class,
-        'products',
-    ]);
-
-    /*
-    |--------------------------------------------------------------------------
-    | Available Vouchers / Product Availability
-    |--------------------------------------------------------------------------
-    */
-
-    Route::get('/availability', [
-        VoucherController::class,
-        'availability',
-    ]);
-
-    /*
-    |--------------------------------------------------------------------------
-    | Purchase Voucher
-    |--------------------------------------------------------------------------
-    |
-    | Customer pays from Tunko wallet.
-    | System selects an available voucher,
-    | marks it SOLD and returns the voucher
-    | reference/code to the customer.
-    |
-    */
-
-    Route::post('/purchase', [
-        VoucherController::class,
-        'purchase',
-    ]);
-
-    /*
-    |--------------------------------------------------------------------------
-    | Purchase History
-    |--------------------------------------------------------------------------
-    */
-
-    Route::get('/history', [
-        VoucherController::class,
-        'history',
-    ]);
-
-    /*
-    |--------------------------------------------------------------------------
-    | Receipt
-    |--------------------------------------------------------------------------
-    |
-    | The PIN/code can be displayed here because
-    | the controller will verify that the voucher
-    | belongs to the authenticated customer.
-    |
-    */
-
-    Route::get('/receipt/{reference}', [
-        VoucherController::class,
-        'receipt',
-    ]);
-
-});
         /*
         |--------------------------------------------------------------------------
         | Exchange Rates
@@ -920,7 +952,93 @@ Route::prefix('vouchers')->group(function () {
             ExchangeRateController::class,
             'index',
         ]);
-
     });
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | Vouchers
+    |--------------------------------------------------------------------------
+    |
+    | Physical airtime/data cards purchased by Tunko
+    | and sold to customers.
+    |
+    */
+
+    Route::prefix('vouchers')->group(function () {
+
+        /*
+        |--------------------------------------------------------------------------
+        | Available Voucher Products
+        |--------------------------------------------------------------------------
+        |
+        | Returns only products that have available
+        | physical vouchers in inventory.
+        |
+        */
+
+        Route::get('/products', [
+            VoucherController::class,
+            'products',
+        ]);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Available Vouchers / Product Availability
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/availability', [
+            VoucherController::class,
+            'availability',
+        ]);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Purchase Voucher
+        |--------------------------------------------------------------------------
+        |
+        | Customer pays from Tunko wallet.
+        | System selects an available voucher,
+        | marks it SOLD and returns the voucher
+        | reference/code to the customer.
+        |
+        */
+
+        Route::post('/purchase', [
+            VoucherController::class,
+            'purchase',
+        ]);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Purchase History
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/history', [
+            VoucherController::class,
+            'history',
+        ]);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Receipt
+        |--------------------------------------------------------------------------
+        |
+        | The PIN/code can be displayed here because
+        | the controller will verify that the voucher
+        | belongs to the authenticated customer.
+        |
+        */
+
+        Route::get('/receipt/{reference}', [
+            VoucherController::class,
+            'receipt',
+        ]);
+    });
 });
