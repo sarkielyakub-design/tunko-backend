@@ -687,55 +687,34 @@ Route::prefix('v1')->group(function () {
             ]);
         });
 
+Route::prefix('kyc')->group(function () {
 
-        /*
-        |--------------------------------------------------------------------------
-        | KYC
-        |--------------------------------------------------------------------------
-        */
+    Route::post('/submit', [
+        KycController::class,
+        'submit',
+    ]);
 
-        Route::prefix('kyc')->group(function () {
+    Route::post('/upload-document', [
+        KycController::class,
+        'uploadDocument',
+    ]);
 
-            /*
-            |--------------------------------------------------------------------------
-            | Submit Personal KYC Information
-            |--------------------------------------------------------------------------
-            */
+    Route::post('/upload-selfie', [
+        KycController::class,
+        'uploadSelfie',
+    ]);
 
-            Route::post('/submit', [
-                KycController::class,
-                'submit',
-            ]);
+    Route::post('/final-submit', [
+        KycController::class,
+        'finalSubmit',
+    ]);
 
+    Route::get('/status', [
+        KycController::class,
+        'status',
+    ]);
 
-            /*
-            |--------------------------------------------------------------------------
-            | Final KYC Submission
-            |--------------------------------------------------------------------------
-            |
-            | Called after the user has completed the KYC
-            | flow and confirms the review page.
-            |
-            */
-
-            Route::post('/final-submit', [
-                KycController::class,
-                'finalSubmit',
-            ]);
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | KYC Status
-            |--------------------------------------------------------------------------
-            */
-
-            Route::get('/status', [
-                KycController::class,
-                'status',
-            ]);
-        });
-
+});
 
         /*
         |--------------------------------------------------------------------------
